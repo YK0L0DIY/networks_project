@@ -59,6 +59,23 @@ class Brocker:
             return False
         return False
 
+    # TODO create function to pickl and send to clients
+    def kill(self, client_socket):
+        msg = {'type': 'kill'}
+        msg = pickle.dumps(msg)
+        info = bytes(f"{len(msg):<{HEADER_LENGTH}}", 'utf-8') + msg
+
+        client_socket.send(info)
+
+    # nfuncao sera do client admin e o brocker tera um recend ou retransmit
+    def send_file(self, client_socket, file_name):
+        with open(file_name, 'r', encoding='utf-8') as file:
+            msg = {'type': 'update', 'version': 1, 'file_name': file_name, 'data': file.read()}
+            msg = pickle.dumps(msg)
+            info = bytes(f"{len(msg):<{HEADER_LENGTH}}", 'utf-8') + msg
+
+            client_socket.send(info)
+
     def receive_message(self, client_socket):
         try:
             message_header = client_socket.recv(HEADER_LENGTH)
@@ -70,10 +87,12 @@ class Brocker:
 
             dict = pickle.loads(client_socket.recv(message_length))
             print(dict)
-            try:
-                return dict['sensor_id']
-            except:
-                print('any server id')
+
+            # try: TODO handel decode
+            return dict['sensor_id']
+            # except:
+            #    print('any server id')
+            #    self.kill(client_socket)
 
         except:
             print("Closed Connection from User = {} ".format(
@@ -108,9 +127,17 @@ class Brocker:
                 else:  # não é uma nova conexão verificamos a existencia de mensagens
                     self.receive_message(notified_socket)
 
+            for x in exception_sockets:
+                print(x)
+
 
 if __name__ == "__main__":
     print(sys.argv)
-    #               borcker ip, brocker port, number of connections
-    brocker = Brocker(sys.argv[1], sys.argv[2], sys.argv[3])
-    brocker.run_brocker()
+
+    try:
+        #               borcker ip, brocker port, number of connections
+        brocker = Brocker(sys.argv[1], sys.argv[2], sys.argv[3])
+        brocker.run_brocker()
+    except:
+        brocker = Brocker()
+        brocker.run_brocker()
