@@ -32,6 +32,7 @@ class Brocker:
     sockets_list = []  # escuta
     clients = {}  # é um dicionario com informação do tipo de cliente (admin ou public_client ou sensor)
     sensor_id = {}  # key é o id e value é o socket
+    sensor_reading = {}  # id -> toda a info do sensor
 
     def __init__(self, brocker_ip='0.0.0.0', brocker_port='9000', n_conects='5'):
 
@@ -76,6 +77,13 @@ class Brocker:
             data = {'version': 1, 'file_name': file_name, 'content': file.read()}
             self.send_info(client_socket, 'update', data)
 
+    def add_new_sensor(self, client_socket, data):
+        socket_id = self.sensor_id[client_socket]
+        self.sensor_reading[socket_id] = {'leituras': [], 'version': 1, 'type': data['sensor_type'],
+                                          'location': data['sensor_location']}
+
+        print(self.sensor_reading)
+
     def receive_message(self, client_socket, new_user=False):
         try:
             message_header = client_socket.recv(HEADER_LENGTH)
@@ -88,9 +96,15 @@ class Brocker:
             dict = pickle.loads(client_socket.recv(message_length))
 
             if new_user:
-                return dict['data']['id'], dict['type']
+                if dict['type'] == 'sensor_registry':
+                    self.sensor_id[client_socket] = dict['data']['id']
+                    self.add_new_sensor(client_socket, dict['data'])
+                else:
+                    self.clients[client_socket] = dict['data']['id']
 
-            print(dict['data'])
+                return dict['data']['id']
+
+            print(f'reading info from {self.sensor_id[client_socket]}', dict['data'])
 
         except:
             try:
@@ -119,18 +133,11 @@ class Brocker:
 
                     client_socket, client_address = self.server_socket.accept()
 
-                    user, type_of_registry = self.receive_message(client_socket, new_user=True)
+                    user = self.receive_message(client_socket, new_user=True)
 
                     self.sockets_list.append(client_socket)
 
-                    print(user, type_of_registry)
-                    if type_of_registry == 'sensor_registry':
-                        self.sensor_id[client_socket] = user
-                    else:
-                        self.clients[client_socket] = user
-
                     print("New Connection from {}, user = {} ".format(client_address, user))
-                    print(self.sensor_id)
 
                 else:  # não é uma nova conexão verificamos a existencia de mensagens
                     self.receive_message(notified_socket)
@@ -145,7 +152,7 @@ if __name__ == "__main__":
     try:
         #               borcker ip, brocker port, number of connections
         brocker = Brocker(sys.argv[1], sys.argv[2], sys.argv[3])
-        brocker.run_brocker()
     except:
         brocker = Brocker()
-        brocker.run_brocker()
+
+    brocker.run_brocker()
