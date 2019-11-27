@@ -102,6 +102,7 @@ class Brocker:
             self.sockets_list.remove(client_socket)
 
             del self.clients[client_socket]
+            client_socket.close()
             return
 
     def run_brocker(self):
