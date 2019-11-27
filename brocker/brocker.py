@@ -29,9 +29,9 @@ HEADER_LENGTH = 10
 
 class Brocker:
     server_socket = None
-    sockets_list = []
+    sockets_list = []  # escuta
     clients = {}  # é um dicionario com informação do tipo de cliente (admin ou public_client ou sensor)
-    sensor_dic = {}  # key é o id e value é o socket
+    sensor_id = {}  # key é o id e value é o socket
 
     def __init__(self, brocker_ip='0.0.0.0', brocker_port='9000', n_conects='5'):
 
@@ -59,49 +59,53 @@ class Brocker:
             return False
         return False
 
-    # TODO create function to pickl and send to clients
-    def kill(self, client_socket):
-        msg = {'type': 'kill'}
+    def send_info(self, client_socket, type, data):
+        msg = {'type': type, 'data': data}
         msg = pickle.dumps(msg)
         info = bytes(f"{len(msg):<{HEADER_LENGTH}}", 'utf-8') + msg
 
         client_socket.send(info)
 
+    # TODO create function to pickl and send to clients
+    def kill(self, client_socket):
+        self.send_info(client_socket, 'kill', {})
+
     # nfuncao sera do client admin e o brocker tera um recend ou retransmit
     def send_file(self, client_socket, file_name):
         with open(file_name, 'r', encoding='utf-8') as file:
-            msg = {'type': 'update', 'version': 1, 'file_name': file_name, 'data': file.read()}
-            msg = pickle.dumps(msg)
-            info = bytes(f"{len(msg):<{HEADER_LENGTH}}", 'utf-8') + msg
+            data = {'version': 1, 'file_name': file_name, 'content': file.read()}
+            self.send_info(client_socket, 'update', data)
 
-            client_socket.send(info)
-
-    def receive_message(self, client_socket):
+    def receive_message(self, client_socket, new_user=False):
         try:
             message_header = client_socket.recv(HEADER_LENGTH)
 
             if not len(message_header):
-                return False
+                raise ValueError
 
             message_length = int(message_header.decode('utf-8').strip())
 
             dict = pickle.loads(client_socket.recv(message_length))
-            print(dict)
 
-            # try: TODO handel decode
-            return dict['sensor_id']
-            # except:
-            #    print('any server id')
-            #    self.kill(client_socket)
+            if new_user:
+                return dict['data']['id'], dict['type']
+
+            print(dict['data'])
 
         except:
-            print("Closed Connection from User = {} ".format(
-                self.clients[client_socket]))
+            try:
+                print("Closed Connection from user = {} ".format(self.clients[client_socket]))
+            except:
+                print("Closed Connection from user = {} ".format(self.sensor_id[client_socket]))
 
             # remover da lista de sockets e da lista de clients
             self.sockets_list.remove(client_socket)
 
-            del self.clients[client_socket]
+            if client_socket in self.clients:
+                del self.clients[client_socket]
+            else:
+                del self.sensor_id[client_socket]
+
             client_socket.close()
             return
 
@@ -115,15 +119,18 @@ class Brocker:
 
                     client_socket, client_address = self.server_socket.accept()
 
-                    user = self.receive_message(client_socket)
-                    if user is False:  # se alguem se disconectar continuamos á escuta dos sockets
-                        continue
+                    user, type_of_registry = self.receive_message(client_socket, new_user=True)
 
                     self.sockets_list.append(client_socket)
 
-                    self.clients[
-                        client_socket] = user  # ficamos com a imformação que aquele socket representa um admin ou public_client / ou um sensor
-                    print("New Connection from {}, UserType = {} ".format(client_address, user))
+                    print(user, type_of_registry)
+                    if type_of_registry == 'sensor_registry':
+                        self.sensor_id[client_socket] = user
+                    else:
+                        self.clients[client_socket] = user
+
+                    print("New Connection from {}, user = {} ".format(client_address, user))
+                    print(self.sensor_id)
 
                 else:  # não é uma nova conexão verificamos a existencia de mensagens
                     self.receive_message(notified_socket)

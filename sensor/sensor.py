@@ -27,12 +27,8 @@ class Sensor:
             print("socket creation failed with error %s" % err)
             exit(1)
 
-        msg = {'type': 'sensor_registry', 'sensor_id': sensor_id, 'sensor_type': sensor_type,
-               'sensor_location': sensor_location}
-        msg = pickle.dumps(msg)
-        info = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8') + msg
-
-        self.sensor_socket.send(info)
+        data = {'id': sensor_id, 'sensor_type': sensor_type, 'sensor_location': sensor_location}
+        self.send_info('sensor_registry', data)
 
         print(
             f"Successful created sensor {self.sensor_socket.getsockname()} and conected to brocker {brocker_ip}:{brocker_port}")
@@ -59,33 +55,40 @@ class Sensor:
                         exit(0)
 
                     elif dict['type'] == 'update':
-                        if self.version < dict['version']:
-                            self.version = dict['version']
-                            with open(dict['file_name'], 'w', encoding='utf-8') as file:
-                                file.write(dict['data'])
+                        if self.version < dict['data']['version']:
+                            self.version = dict['data']['version']
+                            with open(dict['data']['file_name'], 'w', encoding='utf-8') as file:
+                                file.write(dict['data']['content'])
                                 print(f"Version updated to {self.version}")
 
                     # print(dict)
                 else:
                     break
 
-            self.send_info()
+            self.send_info('sensor_reading', {'leitura': 10})
 
     # TODO enviar valores +- corretors ou consistentes
-    def send_info(self):
-        msg = {'type': 'sensor_reading', 'data': 10}
-        msg = pickle.dumps(msg)
-        info = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8') + msg
+    def send_info(self, type, data):
+        try:
+            msg = {'type': type, 'data': data}
+            msg = pickle.dumps(msg)
+            info = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8') + msg
 
-        self.sensor_socket.send(info)
+            self.sensor_socket.send(info)
+
+        except Exception as err:
+            print("sneding error %s" % err)
+            exit(1)
+
+        return
 
 
 if __name__ == "__main__":
-    # print(sys.argv)
+    ## todo verificar argumentos e nao provicae execoes
     try:
         #               borcker ip, brocker port, sensor id, location ,sensor type
         sensor = Sensor(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
-        sensor.run_sensor()
     except:
         sensor = Sensor()
-        sensor.run_sensor()
+
+    sensor.run_sensor()
