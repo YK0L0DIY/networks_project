@@ -31,8 +31,9 @@ class Brocker:
     server_socket = None
     sockets_list = []  # escuta
     clients = {}  # é um dicionario com informação do tipo de cliente (admin ou public_client ou sensor)
-    sensor_id = {}  # key é o id e value é o socket
+    sensor_id = {}  # key é o socket e value é o id
     sensor_reading = {}  # id -> toda a info do sensor
+    locations = {} # vai ter as localizações  onde há sensores
 
     def __init__(self, brocker_ip='0.0.0.0', brocker_port='9000', n_conects='5'):
 
@@ -77,11 +78,34 @@ class Brocker:
             data = {'version': 1, 'file_name': file_name, 'content': file.read()}
             self.send_info(client_socket, 'update', data)
 
-    def add_new_sensor(self, client_socket, data):
-        socket_id = self.sensor_id[client_socket]
-        self.sensor_reading[socket_id] = {'leituras': [], 'version': 1, 'type': data['sensor_type'],
-                                          'location': data['sensor_location']}
+    def add_new_reading(self,client_socket,data):
+        socket_id = self.sensor_id[client_socket]  # vamos buscar o id do sensor
+        tipoDeLeitura = self.sensor_reading[socket_id]['type']  # vamos bucar o tipo de leituras do sensor
+        localDaLeitura = self.sensor_reading[socket_id]['location']  # vamos buscar a localização
+        self.locations[localDaLeitura][tipoDeLeitura].append(data)
+        # fica adiconada a leitura no fim da lista(depois para irmos buscar esta leitura basta fazer [len(array)-1]
+        print("A lista de leituras do tipo ",tipoDeLeitura," tem agr ", self.locations[localDaLeitura][tipoDeLeitura])
 
+
+    def add_new_locatio(self, location):
+        self.locations[location] = {} #adicionar uma localizão como key
+
+
+
+    def add_new_sensor(self, client_socket, data): # aqui basciamente estamos a adicionar um novo sensor á nossa base de dados de sensores
+        socket_id = self.sensor_id[client_socket] #vamos ver o id do sensor
+        self.sensor_reading[socket_id] = {'leituras': None, 'version': 1, 'type': data['sensor_type'],
+                                          'location': data['sensor_location']} # prenchemos já o que sabemos desse sensor quando envia o registo
+        if not data['sensor_location'] in self.locations: # Se a localizção ainda nao tiver leituras  adicionamos essa localização para depois podermos adicionar leituras lá
+            self.add_new_locatio(data['sensor_location'])
+
+        if not data['sensor_type'] in self.locations[data['sensor_location']]:#se ja existir essa localização mas não existir um array com esse tipo de leituras criamos um novo array
+            self.locations[data['sensor_location']][data['sensor_type']] = []
+
+
+
+        # TODO verificar se a localizacao ja existe , se nao exitir adiconar, se já vereficar se a lista de leituras
+        #  daquele tipo ja exite,se ja nao se faz nada se nao adiciona-se essa lista de leitruas a essa localizacao
         print(self.sensor_reading)
 
     def receive_message(self, client_socket, new_user=False):
@@ -105,12 +129,22 @@ class Brocker:
                 return dict['data']['id']
 
             print(f'reading info from {self.sensor_id[client_socket]}', dict['data'])
+            #dict =  {'type': 'sensor_reading', 'data': {'leitura': x}}
+            #agora queremos adicionar as leituras aos arrays respetivos
+            if dict['type'] == 'sensor_reading':#se for uma leitura é guardar essa leitura no lugar certo
+                self.add_new_reading(client_socket,dict['data']['leitura'])
 
-        except:
+
+
+
+
+        except Exception as err:
             try:
                 print("Closed Connection from user = {} ".format(self.clients[client_socket]))
+                print(err)
             except:
                 print("Closed Connection from user = {} ".format(self.sensor_id[client_socket]))
+                print(err)
 
             # remover da lista de sockets e da lista de clients
             self.sockets_list.remove(client_socket)

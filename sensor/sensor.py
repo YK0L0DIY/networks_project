@@ -2,7 +2,7 @@ import socket
 import select
 import sys
 import pickle
-
+import random
 HEADERSIZE = 10
 
 
@@ -34,7 +34,7 @@ class Sensor:
             f"Successful created sensor {self.sensor_socket.getsockname()} and conected to brocker {brocker_ip}:{brocker_port}")
 
     def run_sensor(self):
-        timeout = 10
+        timeout = 3
         while True:
             while True:
                 ready = select.select([self.sensor_socket], [], [], timeout)
@@ -65,7 +65,7 @@ class Sensor:
                 else:
                     break
 
-            self.send_info('sensor_reading', {'leitura': 10})
+            self.send_info('sensor_reading', {'leitura': random.randrange(20, 50, 3)})
 
     # TODO enviar valores +- corretors ou consistentes
     def send_info(self, type, data):
