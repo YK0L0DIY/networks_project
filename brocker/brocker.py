@@ -118,16 +118,14 @@ class Brocker:
             message_length = int(message_header.decode('utf-8').strip())
 
             dict = pickle.loads(client_socket.recv(message_length))
-
             if new_user:
                 if dict['type'] == 'sensor_registry':
                     self.sensor_id[client_socket] = dict['data']['id']
                     self.add_new_sensor(client_socket, dict['data'])
                 else:
-                    self.clients[client_socket] = dict['data']['id']
+                    self.clients[client_socket] = dict['data']['id']#associa o socket com o tipo de conexão (client ou admin)
 
                 return dict['data']['id']
-
             print(f'reading info from {self.sensor_id[client_socket]}', dict['data'])
             #dict =  {'type': 'sensor_reading', 'data': {'leitura': x}}
             #agora queremos adicionar as leituras aos arrays respetivos
@@ -178,6 +176,7 @@ class Brocker:
 
             for x in exception_sockets:
                 print(x)
+
 
 
 if __name__ == "__main__":
