@@ -31,40 +31,36 @@ class Client:
         print(
             f"Successful created sensor {self.client_socket.getsockname()} and conected to brocker {brocker_ip}:{brocker_port}")
 
+
+    def receive_message(self):
+        while True:
+            message_header = self.client_socket.recv(HEADERSIZE)
+
+            if len(message_header):
+                message_length = int(message_header.decode('utf-8').strip())
+
+                dict = pickle.loads(self.client_socket.recv(message_length))
+                print(dict['data'])  # sera uma lista de locais que teem sensores daquele tipo
+                return
+
+
+
     def run_client(self):
         try:
             print("*** Menu ***\n1. Listar locais onde existem sensores de determinado tipo.\n2. Obter última leitura de um local.\n3. Modo publish-subscribe.\n************")
             escolha = int(input())
             if escolha == 1:
-                print("Qual o local?\n")
-                local=input()
                 print("Qual o tipo de poluente? (ex: CO2;NO2...")
                 poluente=input()
-                self.send_info('listar_locais',{'local':local,'poluente':poluente})
-
-                message_header = self.client_socket.recv(HEADERSIZE)
-
-                if not len(message_header):
-                    return False
-
-                message_length = int(message_header.decode('utf-8').strip())
-
-                dict = pickle.loads(self.client_socket.recv(message_length))
-                print(dict)#sera uma lista de locais que teem sensores daquele tipo
+                self.send_info('listar_locais',{'poluente':poluente})
+                self.receive_message()
                 self.run_client()
                 return
             elif escolha == 2:
                 print("Qual o local onde quer receber as últimas leituras?\n")
                 local = input()
-                message_header = self.client_socket.recv(HEADERSIZE)
-
-                if not len(message_header):
-                    return False
-
-                message_length = int(message_header.decode('utf-8').strip())
-
-                dict = pickle.loads(self.client_socket.recv(message_length))
-                print(dict)#será uma lista das temperaturas desse local.
+                self.send_info('leituras_local',{'local':local})
+                self.receive_message()
                 self.run_client()
                 return
             elif escolha == 3:

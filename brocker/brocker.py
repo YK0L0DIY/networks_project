@@ -131,6 +131,17 @@ class Brocker:
             #agora queremos adicionar as leituras aos arrays respetivos
             if dict['type'] == 'sensor_reading':#se for uma leitura é guardar essa leitura no lugar certo
                 self.add_new_reading(client_socket,dict['data']['leitura'])
+            if dict['type'] == 'listar_locais':
+                locais_a_enviar=[]
+                for local in self.locations:
+                    if self.locations[local][dict['data']['poluente']]:
+                        locais_a_enviar.append(local)
+                if len(locais_a_enviar) >0:
+                    self.send_info(client_socket,'Lista_Locais',locais_a_enviar)
+                else:
+                    self.send_info(client_socket,'Lista_Locais',"Não existem locais com esse tipo de poluente.")
+
+
 
 
 
