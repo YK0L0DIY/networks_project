@@ -3,7 +3,12 @@ import select
 import sys
 import pickle
 import random
+import logging
+
 HEADERSIZE = 10
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
 
 class Sensor:
@@ -16,21 +21,21 @@ class Sensor:
 
         try:
             self.sensor_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            print("Socket successfully created")
+            logger.info("Socket successfully created")
         except socket.error as err:
-            print("socket creation failed with error %s" % err)
+            logger.error("socket creation failed with error %s" % err)
             exit(1)
 
         try:
             self.sensor_socket.connect((brocker_ip, int(brocker_port)))
         except Exception as err:
-            print("socket creation failed with error %s" % err)
+            logger.error("socket creation failed with error %s" % err)
             exit(1)
 
         data = {'id': sensor_id, 'sensor_type': sensor_type, 'sensor_location': sensor_location}
         self.send_info('sensor_registry', data)
 
-        print(
+        logger.info(
             f"Successful created sensor {self.sensor_socket.getsockname()} and conected to brocker {brocker_ip}:{brocker_port}")
 
     def run_sensor(self):
@@ -50,7 +55,7 @@ class Sensor:
                     dict = pickle.loads(self.sensor_socket.recv(message_length))
 
                     if dict['type'] == 'kill':
-                        print('Killing sensor')
+                        logger.info('Killing sensor')
                         self.sensor_socket.close()
                         exit(0)
 
@@ -59,7 +64,7 @@ class Sensor:
                             self.version = dict['data']['version']
                             with open(dict['data']['file_name'], 'w', encoding='utf-8') as file:
                                 file.write(dict['data']['content'])
-                                print(f"Version updated to {self.version}")
+                                logger.info(f"Version updated to {self.version}")
 
                     # print(dict)
                 else:
@@ -77,7 +82,7 @@ class Sensor:
             self.sensor_socket.send(info)
 
         except Exception as err:
-            print("sneding error %s" % err)
+            logger.error("sneding error %s" % err)
             exit(1)
 
         return
