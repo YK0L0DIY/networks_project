@@ -151,21 +151,41 @@ class Brocker:
             self.send_info(client_socket, 'response',
                            {'status': 400, 'error': 'Had some error killing sensors verify your input'})
         return
+    def list_locals(self,client_socket,message):
+        locais_a_enviar = []
+        for local in self.locations:
+            if message['data']['poluente'] in self.locations[local]:
+                locais_a_enviar.append(local)
+        if len(locais_a_enviar) > 0:
+            self.send_info(client_socket, 'Lista_Locais', locais_a_enviar)
+        else:
+            self.send_info(client_socket, 'Lista_Locais', "Não existem locais com esse tipo de poluente.")
+
+    def local_read(self,client_socket,message):
+        last_readings={}
+        try:
+            if message['data']['local'] in self.locations:
+                for poluente in self.locations[message['data']['local']]:
+                    size_array = len(self.locations[message['data']['local']][poluente])
+                    last_readings[poluente]= self.locations[message['data']['local']][poluente][size_array-1]
+
+            if len(last_readings) > 0:
+                self.send_info(client_socket, 'Last_readings', last_readings)
+            else:
+                self.send_info(client_socket, 'Last_readings', "Não existem medições de poluentes em "+message['data']['local'])
+        except Exception as err:
+            logger.info("ERRO ",err)
+
 
     def decode_message(self, client_socket, message):
         if message['type'] == 'sensor_reading':  # se for uma leitura é guardar essa leitura no lugar certo
             self.add_new_reading(client_socket, message['data']['leitura'])
 
         elif message['type'] == 'listar_locais':
-            # TODO muda para ser uma funcao
-            locais_a_enviar = []
-            for local in self.locations:
-                if self.locations[local][message['data']['poluente']]:
-                    locais_a_enviar.append(local)
-            if len(locais_a_enviar) > 0:
-                self.send_info(client_socket, 'Lista_Locais', locais_a_enviar)
-            else:
-                self.send_info(client_socket, 'Lista_Locais', "Não existem locais com esse tipo de poluente.")
+            self.list_locals(client_socket,message)
+
+        elif message['type'] == 'leituras_local':
+            self.local_read(client_socket,message)
 
         elif message['type'] == 'get_last_reading':
             self.get_last_reading(client_socket, message['data'])

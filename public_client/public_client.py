@@ -2,33 +2,38 @@ import socket
 import select
 import sys
 import pickle
-import random
+import logging
+
 HEADERSIZE = 10
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
 class Client:
     client_socket = None
+    client_id = None
 
 
     # construtor oq ual cria a coencao com o brocker
-    def __init__(self, brocker_ip='0.0.0.0', brocker_port='9000'):
+    def __init__(self, brocker_ip='0.0.0.0', brocker_port='9000', id='client'):
+        self.client_id=id
 
         try:
             self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            print("Socket successfully created")
+            logger.info("Socket successfully created")
         except socket.error as err:
-            print("socket creation failed with error %s" % err)
+            logger.info("socket creation failed with error %s" % err)
             exit(1)
 
         try:
             self.client_socket.connect((brocker_ip, int(brocker_port)))
         except Exception as err:
-            print("socket creation failed with error %s" % err)
+            logger.info("socket creation failed with error %s" % err)
             exit(1)
-        data = {'id':'client'}
+        data = {'id':self.client_id}
         self.send_info('client_connected',data)
 
-        print(
+        logger.info(
             f"Successful created sensor {self.client_socket.getsockname()} and conected to brocker {brocker_ip}:{brocker_port}")
 
 
@@ -40,30 +45,30 @@ class Client:
                 message_length = int(message_header.decode('utf-8').strip())
 
                 dict = pickle.loads(self.client_socket.recv(message_length))
-                print(dict['data'])  # sera uma lista de locais que teem sensores daquele tipo
+                logger.info(dict['data'])  # sera uma lista de locais que teem sensores daquele tipo
                 return
 
 
 
     def run_client(self):
         try:
-            print("*** Menu ***\n1. Listar locais onde existem sensores de determinado tipo.\n2. Obter última leitura de um local.\n3. Modo publish-subscribe.\n************")
+            print("*** Menu ***\n0. Listar locais onde existem sensores de determinado tipo.\n1. Obter última leitura de um local.\n2. Modo publish-subscribe.\n************")
             escolha = int(input())
-            if escolha == 1:
+            if escolha == 0:
                 print("Qual o tipo de poluente? (ex: CO2;NO2...")
                 poluente=input()
                 self.send_info('listar_locais',{'poluente':poluente})
                 self.receive_message()
                 self.run_client()
                 return
-            elif escolha == 2:
+            elif escolha == 1:
                 print("Qual o local onde quer receber as últimas leituras?\n")
                 local = input()
                 self.send_info('leituras_local',{'local':local})
                 self.receive_message()
                 self.run_client()
                 return
-            elif escolha == 3:
+            elif escolha == 2:
                 print("Qual o local que quer subescrever?\n")
                 local = input()
                 return
@@ -71,7 +76,7 @@ class Client:
                 print(" Escolha uma 1, 2 ou 3\n")
                 self.run_client()
         except Exception as err:
-            print("socket creation failed with error %s" % err)
+            logger.info("socket creation failed with error %s" % err)
             exit(1)
 
 
@@ -85,10 +90,10 @@ class Client:
             info = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8') + msg
 
             self.client_socket.send(info)
-            print("Data sent to broker")
+            logger.info("Data sent to broker")
 
         except Exception as err:
-            print("sending error %s" % err)
+            logger.info("sending error %s" % err)
             exit(1)
 
         return
@@ -97,8 +102,8 @@ class Client:
 if __name__ == "__main__":
 
     try:
-        #               borcker ip, brocker port
-        client = Client(sys.argv[1], sys.argv[2])
+        #               borcker ip, brocker port   id cliente
+        client = Client(sys.argv[1], sys.argv[2],sys.argv[3])
     except:
         client = Client()
 
