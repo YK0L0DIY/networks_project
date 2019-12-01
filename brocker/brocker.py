@@ -46,10 +46,6 @@ class Brocker:
         except Exception as err:
             logger.error(err)
 
-    # TODO create function to pickl and send to clients
-    def kill_sensor(self, client_socket):
-        self.send_info(client_socket, 'kill', {})
-
     def add_new_reading(self, client_socket, data):
         socket_id = self.sensor_id[client_socket]  # vamos buscar o id do sensor
         tipoDeLeitura = self.sensor_reading[socket_id]['type']  # vamos bucar o tipo de leituras do sensor
@@ -57,18 +53,16 @@ class Brocker:
         self.sensor_reading[socket_id]['last_read'] = data
         self.locations[localDaLeitura][tipoDeLeitura].append(data)
         # fica adiconada a leitura no fim da lista(depois para irmos buscar esta leitura basta fazer [len(array)-1]
-        logger.info("A lista de leituras do tipo " + tipoDeLeitura + " tem agr " + str(
-            self.locations[localDaLeitura][tipoDeLeitura]))
+        # logger.info("A lista de leituras do tipo " + tipoDeLeitura + " tem agr " + str(
+        #    self.locations[localDaLeitura][tipoDeLeitura]))
 
     def add_new_locatio(self, location):
-        self.locations[location] = {}  # adicionar uma localizão como key
+        self.locations[location] = {}
 
-    def add_new_sensor(self, client_socket,
-                       data):  # aqui basciamente estamos a adicionar um novo sensor á nossa base de dados de sensores
+    def add_new_sensor(self, client_socket, data):
         socket_id = self.sensor_id[client_socket]  # vamos ver o id do sensor
-        self.sensor_reading[socket_id] = {'leituras': None, 'version': 1, 'type': data['sensor_type'],
-                                          'location': data[
-                                              'sensor_location']}  # prenchemos já o que sabemos desse sensor quando envia o registo
+        self.sensor_reading[socket_id] = {'version': 1, 'type': data['sensor_type'],
+                                          'location': data['sensor_location']}
         if not data[
                    'sensor_location'] in self.locations:  # Se a localizção ainda nao tiver leituras  adicionamos essa localização para depois podermos adicionar leituras lá
             self.add_new_locatio(data['sensor_location'])
@@ -77,8 +71,6 @@ class Brocker:
             'sensor_location']]:  # se ja existir essa localização mas não existir um array com esse tipo de leituras criamos um novo array
             self.locations[data['sensor_location']][data['sensor_type']] = []
 
-        # TODO verificar se a localizacao ja existe , se nao exitir adiconar, se já vereficar se a lista de leituras
-        #  daquele tipo ja exite,se ja nao se faz nada se nao adiciona-se essa lista de leitruas a essa localizacao
         logger.info(self.sensor_reading)
 
     def get_last_reading(self, client_socket, data):
@@ -101,21 +93,63 @@ class Brocker:
         return
 
     def get_all_sensors(self, client_socket, data):
-        print('to implement')
-        self.send_info(client_socket, 'response',
-                       {'status': 400, 'error': 'Not implemented'})
+        logger.info('Listing all sensors')
+        list_of_sensors = []
+        for x in self.sensor_id:
+            id = self.sensor_id[x]
+            type = self.sensor_reading[id]['type']
+            local = self.sensor_reading[id]['location']
+            version = self.sensor_reading[id]['version']
+            sensor = f"{id} type: {type} location: {local} version: {version}"
+            list_of_sensors.append(sensor)
+
+        if not list_of_sensors:
+            self.send_info(client_socket, 'response', {'status': 400, 'error': 'There are 0 sensors'})
+        else:
+            self.send_info(client_socket, 'response', {'status': 200, 'sensors': list_of_sensors})
         return
+
+    def send_update(self, sensor_socket, data):
+        self.send_info(sensor_socket, 'update',
+                       {'file_name': data['file_name'], 'content': data['content'], 'version': data['version']})
 
     def update(self, client_socket, data):
-        print('to implement')
-        self.send_info(client_socket, 'response',
-                       {'status': 400, 'error': 'Not implemented'})
+        sensor_type = data['sensor_type']
+        logger.info(f"Updating sensors of type {data['sensor_type']}")
+        try:
+            for socket in self.sensor_id:
+                id = self.sensor_id[socket]
+                if self.sensor_reading[id]['type'] == sensor_type and \
+                        int(self.sensor_reading[id]['version']) < int(data['version']):
+                    self.send_update(socket, data)
+                    self.sensor_reading[id]['version'] = data['version']
+
+            self.send_info(client_socket, 'response', {'status': 200})
+
+        except:
+            self.send_info(client_socket, 'response',
+                           {'status': 400, 'error': f'Problem updating the sensor of type {sensor_type}'})
         return
 
+    def kill_sensor(self, client_socket):
+        self.send_info(client_socket, 'kill', {})
+
     def kill_sensors(self, client_socket, data):
-        print('to implement')
-        self.send_info(client_socket, 'response',
-                       {'status': 400, 'error': 'Not implemented'})
+
+        killed = []
+        for x in data['sensors']:
+            if x:
+                for socket in self.sensor_id:
+                    if self.sensor_id[socket] == x:
+                        self.kill_sensor(socket)
+                        killed.append(x)
+
+        if len(killed) == len(data['sensors']):
+            logger.info('Killed all sensor pretended')
+            self.send_info(client_socket, 'response', {'status': 200})
+        else:
+            self.send_info(client_socket, 'response',
+                           {'status': 400, 'error': 'Had some error killing sensors verify your input'})
         return
 
     def decode_message(self, client_socket, message):

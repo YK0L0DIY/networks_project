@@ -60,13 +60,12 @@ class Sensor:
                         exit(0)
 
                     elif dict['type'] == 'update':
-                        if self.version < dict['data']['version']:
+                        if int(self.version) < int(dict['data']['version']):
                             self.version = dict['data']['version']
                             with open(dict['data']['file_name'], 'w', encoding='utf-8') as file:
                                 file.write(dict['data']['content'])
                                 logger.info(f"Version updated to {self.version}")
 
-                    # print(dict)
                 else:
                     break
 
