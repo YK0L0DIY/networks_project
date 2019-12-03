@@ -1,8 +1,8 @@
 import socket
-import select
 import sys
 import pickle
 import logging
+import os
 
 HEADERSIZE = 10
 
@@ -37,6 +37,8 @@ class Client:
             f"Successful created sensor {self.client_socket.getsockname()} and conected to brocker {brocker_ip}:{brocker_port}")
 
 
+
+
     def receive_message(self):
         while True:
             message_header = self.client_socket.recv(HEADERSIZE)
@@ -45,39 +47,58 @@ class Client:
                 message_length = int(message_header.decode('utf-8').strip())
 
                 dict = pickle.loads(self.client_socket.recv(message_length))
+                if dict['lista_locais']['data']['status']==200:
+                    for x in dict['lista_locais']['data']['value']:
+                        print(x)
+                elif dict['lista_locais']['data']['status']==400:
+                    print(dict['lista_locais']['data']['value'])
+                #TODO O RESTO
+                    
+
                 logger.info(dict['data'])  # sera uma lista de locais que teem sensores daquele tipo
                 return
 
 
+    def menu(self):
+        while True:
+            try:
+
+                print(
+                    "*** Menu ***\n0. Listar locais onde existem sensores de determinado tipo.\n1. Obter última leitura de um local.\n2. Modo publish-subscribe.\n************")
+                escolha = int(input())
+                if escolha == 0:
+                    print("Qual o tipo de poluente? (ex: CO2;NO2...")
+                    poluente = input()
+                    self.send_info('listar_locais', {'poluente': poluente})
+
+
+                    return
+                elif escolha == 1:
+                    print("Qual o local onde quer receber as últimas leituras?\n")
+                    local = input()
+                    self.send_info('leituras_local', {'local': local})
+
+                    return
+                elif escolha == 2:
+                    print("Qual o local que quer subescrever?\n")
+                    local = input()
+                    self.send_info("sub", {'locfal': local})
+                    return
+                else:
+                    print(" Escolha uma 1, 2 ou 3\n")
+
+            except Exception as err:
+                logger.info("socket creation failed with error %s" % err)
+                exit(1)
 
     def run_client(self):
-        try:
-            print("*** Menu ***\n0. Listar locais onde existem sensores de determinado tipo.\n1. Obter última leitura de um local.\n2. Modo publish-subscribe.\n************")
-            escolha = int(input())
-            if escolha == 0:
-                print("Qual o tipo de poluente? (ex: CO2;NO2...")
-                poluente=input()
-                self.send_info('listar_locais',{'poluente':poluente})
-                self.receive_message()
-                self.run_client()
-                return
-            elif escolha == 1:
-                print("Qual o local onde quer receber as últimas leituras?\n")
-                local = input()
-                self.send_info('leituras_local',{'local':local})
-                self.receive_message()
-                self.run_client()
-                return
-            elif escolha == 2:
-                print("Qual o local que quer subescrever?\n")
-                local = input()
-                return
-            else:
-                print(" Escolha uma 1, 2 ou 3\n")
-                self.run_client()
-        except Exception as err:
-            logger.info("socket creation failed with error %s" % err)
-            exit(1)
+        process = os.fork()
+        if process > 0:
+            self.menu()
+        else:
+            self.receive_message()
+
+
 
 
 
@@ -106,5 +127,4 @@ if __name__ == "__main__":
         client = Client(sys.argv[1], sys.argv[2],sys.argv[3])
     except:
         client = Client()
-
     client.run_client()

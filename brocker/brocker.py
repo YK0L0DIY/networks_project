@@ -157,9 +157,9 @@ class Brocker:
             if message['data']['poluente'] in self.locations[local]:
                 locais_a_enviar.append(local)
         if len(locais_a_enviar) > 0:
-            self.send_info(client_socket, 'Lista_Locais', locais_a_enviar)
+            self.send_info(client_socket, 'lista_locais', {'status':200,'value':locais_a_enviar})
         else:
-            self.send_info(client_socket, 'Lista_Locais', "Não existem locais com esse tipo de poluente.")
+            self.send_info(client_socket, 'lista_locais', {'status':400,'value':"Não existem locais com esse tipo de poluente."})
 
     def local_read(self,client_socket,message):
         last_readings={}
@@ -170,9 +170,9 @@ class Brocker:
                     last_readings[poluente]= self.locations[message['data']['local']][poluente][size_array-1]
 
             if len(last_readings) > 0:
-                self.send_info(client_socket, 'Last_readings', last_readings)
+                self.send_info(client_socket, 'local_read', {'status':200,'value':last_readings})
             else:
-                self.send_info(client_socket, 'Last_readings', "Não existem medições de poluentes em "+message['data']['local'])
+                self.send_info(client_socket, 'local_read', {'status':400,'value':"Não existem medições de poluentes em "+message['data']['local']})
         except Exception as err:
             logger.info("ERRO ",err)
 
@@ -189,6 +189,9 @@ class Brocker:
 
         elif message['type'] == 'get_last_reading':
             self.get_last_reading(client_socket, message['data'])
+
+        elif message['type'] == 'sub':
+            self.get_last_reading(client_socket, message['data'])#alterar aqui
 
         elif message['type'] == 'get_all_sensors':
             self.get_all_sensors(client_socket, message['data'])
