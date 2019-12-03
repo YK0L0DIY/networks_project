@@ -47,13 +47,21 @@ class Client:
                 message_length = int(message_header.decode('utf-8').strip())
 
                 dict = pickle.loads(self.client_socket.recv(message_length))
-                if dict['lista_locais']['data']['status']==200:
-                    for x in dict['lista_locais']['data']['value']:
-                        print(x)
-                elif dict['lista_locais']['data']['status']==400:
-                    print(dict['lista_locais']['data']['value'])
-                #TODO O RESTO
-                    
+                logger.info(dict)  # sera uma lista de locais que teem sensores daquele tipo
+
+                logger.info("A receber dados: \n")
+                if dict['type'] == 'lista_locais':
+                    if dict['data']['status']==200:
+                        for x in dict['data']['value']:
+                            print(x)
+                    elif dict['data']['status']==400:
+                        print(dict['data']['value'])
+                if dict['type'] == 'leituras_local':
+                    if dict['data']['status']==200:
+                        for key in dict['data']['value']:
+                            print(key+": " + str(dict['data']['value'][key]))
+                    elif dict['data']['status']==400:
+                        print(dict['data']['value'])
 
                 logger.info(dict['data'])  # sera uma lista de locais que teem sensores daquele tipo
                 return
@@ -62,7 +70,6 @@ class Client:
     def menu(self):
         while True:
             try:
-
                 print(
                     "*** Menu ***\n0. Listar locais onde existem sensores de determinado tipo.\n1. Obter última leitura de um local.\n2. Modo publish-subscribe.\n************")
                 escolha = int(input())
@@ -70,26 +77,20 @@ class Client:
                     print("Qual o tipo de poluente? (ex: CO2;NO2...")
                     poluente = input()
                     self.send_info('listar_locais', {'poluente': poluente})
-
-
-                    return
+                    continue
                 elif escolha == 1:
                     print("Qual o local onde quer receber as últimas leituras?\n")
                     local = input()
                     self.send_info('leituras_local', {'local': local})
-
-                    return
+                    continue
                 elif escolha == 2:
                     print("Qual o local que quer subescrever?\n")
                     local = input()
-                    self.send_info("sub", {'locfal': local})
-                    return
-                else:
-                    print(" Escolha uma 1, 2 ou 3\n")
-
+                    self.send_info("sub", {'local': local})
+                    continue
             except Exception as err:
-                logger.info("socket creation failed with error %s" % err)
-                exit(1)
+                logger.info(" Escolha uma 1, 2 ou 3")
+                continue
 
     def run_client(self):
         process = os.fork()

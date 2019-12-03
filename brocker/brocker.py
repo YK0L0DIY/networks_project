@@ -170,12 +170,15 @@ class Brocker:
                     last_readings[poluente]= self.locations[message['data']['local']][poluente][size_array-1]
 
             if len(last_readings) > 0:
-                self.send_info(client_socket, 'local_read', {'status':200,'value':last_readings})
+                self.send_info(client_socket, 'leituras_local', {'status':200,'value':last_readings})
             else:
-                self.send_info(client_socket, 'local_read', {'status':400,'value':"Não existem medições de poluentes em "+message['data']['local']})
+                self.send_info(client_socket, 'leituras_local', {'status':400,'value':"Não existem medições de poluentes em "+message['data']['local']})
         except Exception as err:
             logger.info("ERRO ",err)
 
+    def publish_subscribe(self,client_socket,message):
+        if message['data']['local'] in self.locations:
+        return
 
     def decode_message(self, client_socket, message):
         if message['type'] == 'sensor_reading':  # se for uma leitura é guardar essa leitura no lugar certo
@@ -191,7 +194,7 @@ class Brocker:
             self.get_last_reading(client_socket, message['data'])
 
         elif message['type'] == 'sub':
-            self.get_last_reading(client_socket, message['data'])#alterar aqui
+            self.publish_subscribe(client_socket, message['data'])
 
         elif message['type'] == 'get_all_sensors':
             self.get_all_sensors(client_socket, message['data'])
