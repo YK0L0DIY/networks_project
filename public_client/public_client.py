@@ -62,8 +62,12 @@ class Client:
                             print(key+": " + str(dict['data']['value'][key]))
                     elif dict['data']['status']==400:
                         print(dict['data']['value'])
-
-                logger.info(dict['data'])  # sera uma lista de locais que teem sensores daquele tipo
+                if dict['type'] == 'subMessage':
+                    if dict['data']['status'] == 200:
+                        print("Sub Info for "+dict['data']['value']['local'] +"= ",dict['data']['value']['newRead'])
+                    elif dict['data']['status'] == 400:
+                        print(dict['data']['value'])
+                #logger.info(dict['data'])  # sera uma lista de locais que teem sensores daquele tipo
                 return
 
 
@@ -77,20 +81,20 @@ class Client:
                     print("Qual o tipo de poluente? (ex: CO2;NO2...")
                     poluente = input()
                     self.send_info('listar_locais', {'poluente': poluente})
-                    continue
+
                 elif escolha == 1:
                     print("Qual o local onde quer receber as últimas leituras?\n")
                     local = input()
                     self.send_info('leituras_local', {'local': local})
-                    continue
+
                 elif escolha == 2:
                     print("Qual o local que quer subescrever?\n")
                     local = input()
                     self.send_info("sub", {'local': local})
-                    continue
+
             except Exception as err:
                 logger.info(" Escolha uma 1, 2 ou 3")
-                continue
+
 
     def run_client(self):
         process = os.fork()

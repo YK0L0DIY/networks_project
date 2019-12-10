@@ -18,6 +18,7 @@ class Brocker:
     sensor_reading = {}  # id -> toda a info do sensor
     locations = {}  # vai ter as localizações  onde há sensores
 
+
     def __init__(self, brocker_ip='0.0.0.0', brocker_port='9000', n_conects='5'):
 
         try:
@@ -46,18 +47,37 @@ class Brocker:
         except Exception as err:
             logger.error(err)
 
+    def publish_subscribe(self, client_socket, message):
+        try:
+            if message['local'] in self.locations:
+                self.locations[message['local']]['sub_clients'].append(client_socket)
+            else:
+                self.send_info(client_socket, 'subMessage', {'status': 400, 'value': "Esse local não tem sensores."})
+        except Exception as err:
+            logger.error(err)
+
     def add_new_reading(self, client_socket, data):
-        socket_id = self.sensor_id[client_socket]  # vamos buscar o id do sensor
-        tipoDeLeitura = self.sensor_reading[socket_id]['type']  # vamos bucar o tipo de leituras do sensor
-        localDaLeitura = self.sensor_reading[socket_id]['location']  # vamos buscar a localização
-        self.sensor_reading[socket_id]['last_read'] = data
-        self.locations[localDaLeitura][tipoDeLeitura].append(data)
+        try:
+            socket_id = self.sensor_id[client_socket]  # vamos buscar o id do sensor
+            tipoDeLeitura = self.sensor_reading[socket_id]['type']  # vamos bucar o tipo de leituras do sensor
+            localDaLeitura = self.sensor_reading[socket_id]['location']  # vamos buscar a localização
+            lenghArr = len(self.locations[localDaLeitura][tipoDeLeitura])
+            if lenghArr > 0 and (self.locations[localDaLeitura][tipoDeLeitura][lenghArr-1] != data):
+                dataDict ={'local':localDaLeitura, 'newRead': data}
+                for client in self.locations[localDaLeitura]['sub_clients']:
+                    self.send_info(client, 'subMessage', {'status': 200, 'value': dataDict})
+            self.sensor_reading[socket_id]['last_read'] = data
+            self.locations[localDaLeitura][tipoDeLeitura].append(data)
+        except Exception as err:
+            logger.error(err)
+
         # fica adiconada a leitura no fim da lista(depois para irmos buscar esta leitura basta fazer [len(array)-1]
         # logger.info("A lista de leituras do tipo " + tipoDeLeitura + " tem agr " + str(
         #    self.locations[localDaLeitura][tipoDeLeitura]))
 
     def add_new_locatio(self, location):
         self.locations[location] = {}
+        self.locations[location]['sub_clients'] = []
 
     def add_new_sensor(self, client_socket, data):
         socket_id = self.sensor_id[client_socket]  # vamos ver o id do sensor
@@ -176,12 +196,9 @@ class Brocker:
         except Exception as err:
             logger.info("ERRO ",err)
 
-    def publish_subscribe(self,client_socket,message):
-        if message['data']['local'] in self.locations:
-        return
 
     def decode_message(self, client_socket, message):
-        if message['type'] == 'sensor_reading':  # se for uma leitura é guardar essa leitura no lugar certo
+        if message['type'] == 'sensor_reading':
             self.add_new_reading(client_socket, message['data']['leitura'])
 
         elif message['type'] == 'listar_locais':
