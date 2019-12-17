@@ -3,20 +3,24 @@ import sys
 import pickle
 import logging
 import os
+import threading
+import time
 
 HEADERSIZE = 10
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
+sem = threading.Semaphore()
+
+
 class Client:
     client_socket = None
     client_id = None
 
-
     # construtor oq ual cria a coencao com o brocker
     def __init__(self, brocker_ip='0.0.0.0', brocker_port='9000', id='client'):
-        self.client_id=id
+        self.client_id = id
 
         try:
             self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -30,52 +34,56 @@ class Client:
         except Exception as err:
             logger.info("socket creation failed with error %s" % err)
             exit(1)
-        data = {'id':self.client_id}
-        self.send_info('client_connected',data)
+        data = {'id': self.client_id}
+        self.send_info('client_connected', data)
 
         logger.info(
-            f"Successful created sensor {self.client_socket.getsockname()} and conected to brocker {brocker_ip}:{brocker_port}")
-
-
-
+            f"Successful created client {self.client_socket.getsockname()} and conected to brocker {brocker_ip}:{brocker_port}")
 
     def receive_message(self):
         while True:
+            sem.acquire()
             message_header = self.client_socket.recv(HEADERSIZE)
 
-            if len(message_header):
+            if message_header:
                 message_length = int(message_header.decode('utf-8').strip())
 
                 dict = pickle.loads(self.client_socket.recv(message_length))
-                logger.info(dict)  # sera uma lista de locais que teem sensores daquele tipo
+                # logger.info(dict)  # sera uma lista de locais que teem sensores daquele tipo
 
-                logger.info("A receber dados: \n")
+                # logger.info("A receber dados: \n")
                 if dict['type'] == 'lista_locais':
-                    if dict['data']['status']==200:
+                    if dict['data']['status'] == 200:
                         for x in dict['data']['value']:
                             print(x)
-                    elif dict['data']['status']==400:
+                    elif dict['data']['status'] == 400:
                         print(dict['data']['value'])
                 if dict['type'] == 'leituras_local':
-                    if dict['data']['status']==200:
+                    if dict['data']['status'] == 200:
                         for key in dict['data']['value']:
-                            print(key+": " + str(dict['data']['value'][key]))
-                    elif dict['data']['status']==400:
+                            print(key + ": " + str(dict['data']['value'][key]))
+                    elif dict['data']['status'] == 400:
                         print(dict['data']['value'])
                 if dict['type'] == 'subMessage':
                     if dict['data']['status'] == 200:
-                        print("Sub Info for "+dict['data']['value']['local'] +"= ",dict['data']['value']['newRead'])
+                        print("Sub Info for " + dict['data']['value']['local'] + "= ",
+                              dict['data']['value']['newRead'])
                     elif dict['data']['status'] == 400:
                         print(dict['data']['value'])
-                #logger.info(dict['data'])  # sera uma lista de locais que teem sensores daquele tipo
-                return
 
+                sem.release()
+                time.sleep(0.25)
 
     def menu(self):
         while True:
+            sem.acquire()
             try:
                 print(
-                    "*** Menu ***\n0. Listar locais onde existem sensores de determinado tipo.\n1. Obter última leitura de um local.\n2. Modo publish-subscribe.\n************")
+                    "Menu:\n"
+                    "0. Listar locais onde existem sensores de determinado tipo.\n"
+                    "1. Obter última leitura de um local.\n"
+                    "2. Modo publish-subscribe.\n"
+                    "3. Exit\n")
                 escolha = int(input())
                 if escolha == 0:
                     print("Qual o tipo de poluente? (ex: CO2;NO2...")
@@ -92,31 +100,33 @@ class Client:
                     local = input()
                     self.send_info("sub", {'local': local})
 
+                elif escolha == 3:
+                    self.client_socket.close()
+                    exit(0)
+
             except Exception as err:
                 logger.info(" Escolha uma 1, 2 ou 3")
-
+            finally:
+                sem.release()
+                time.sleep(0.25)
 
     def run_client(self):
+
         process = os.fork()
         if process > 0:
             self.menu()
         else:
             self.receive_message()
 
-
-
-
-
-
-
-    def send_info(self, type,data):
+    def send_info(self, type, data):
         try:
-            msg = {'type': type,'data': data}
+            msg = {'type': type, 'data': data}
             msg = pickle.dumps(msg)
             info = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8') + msg
 
             self.client_socket.send(info)
-            logger.info("Data sent to broker")
+            # logger.info("Data sent to broker")
+
 
         except Exception as err:
             logger.info("sending error %s" % err)
@@ -129,7 +139,7 @@ if __name__ == "__main__":
 
     try:
         #               borcker ip, brocker port   id cliente
-        client = Client(sys.argv[1], sys.argv[2],sys.argv[3])
+        client = Client(sys.argv[1], sys.argv[2], sys.argv[3])
     except:
         client = Client()
     client.run_client()
