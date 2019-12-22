@@ -5,8 +5,9 @@ import logging
 import os
 import threading
 import time
+import yaml
 
-HEADERSIZE = 10
+HEADER = 10
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
@@ -19,7 +20,7 @@ class Client:
     client_id = None
 
     # construtor oq ual cria a coencao com o brocker
-    def __init__(self, brocker_ip='0.0.0.0', brocker_port='9000', id='client'):
+    def __init__(self, broker_ip='0.0.0.0', broker_port='9000', id='client'):
         self.client_id = id
 
         try:
@@ -30,7 +31,7 @@ class Client:
             exit(1)
 
         try:
-            self.client_socket.connect((brocker_ip, int(brocker_port)))
+            self.client_socket.connect((broker_ip, int(broker_port)))
         except Exception as err:
             logger.info("socket creation failed with error %s" % err)
             exit(1)
@@ -38,12 +39,12 @@ class Client:
         self.send_info('client_connected', data)
 
         logger.info(
-            f"Successful created client {self.client_socket.getsockname()} and conected to brocker {brocker_ip}:{brocker_port}")
+            f"Successful created client {self.client_socket.getsockname()} and conected to brocker {broker_ip}:{broker_port}")
 
     def receive_message(self):
         while True:
             sem.acquire()
-            message_header = self.client_socket.recv(HEADERSIZE)
+            message_header = self.client_socket.recv(HEADER)
 
             if message_header:
                 message_length = int(message_header.decode('utf-8').strip())
@@ -122,7 +123,7 @@ class Client:
         try:
             msg = {'type': type, 'data': data}
             msg = pickle.dumps(msg)
-            info = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8') + msg
+            info = bytes(f"{len(msg):<{HEADER}}", 'utf-8') + msg
 
             self.client_socket.send(info)
             # logger.info("Data sent to broker")

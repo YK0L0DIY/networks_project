@@ -2,14 +2,15 @@ import socket
 import sys
 import pickle
 import logging
+import yaml
 
-HEADERSIZE = 10
+HEADER = 10
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
 
-class Client_admin:
+class ClientAdmin:
     server_socket = None
     admin_id = None
     options = {
@@ -45,7 +46,7 @@ class Client_admin:
 
     def receive_message(self):
         try:
-            message_header = self.server_socket.recv(HEADERSIZE)
+            message_header = self.server_socket.recv(HEADER)
 
             if not len(message_header):
                 raise ValueError
@@ -142,7 +143,7 @@ class Client_admin:
         try:
             msg = {'type': type, 'data': data}
             msg = pickle.dumps(msg)
-            info = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8') + msg
+            info = bytes(f"{len(msg):<{HEADER}}", 'utf-8') + msg
 
             self.server_socket.send(info)
             print("Data sent to broker")
@@ -158,8 +159,8 @@ if __name__ == "__main__":
 
     try:
         #               borcker ip, broker port, broker id
-        client = Client_admin(sys.argv[1], sys.argv[2], sys.argv[3])
+        client = ClientAdmin(sys.argv[1], sys.argv[2], sys.argv[3])
     except:
-        client = Client_admin()
+        client = ClientAdmin()
 
     client.run_client_admin()

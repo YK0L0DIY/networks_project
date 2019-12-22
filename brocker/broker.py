@@ -3,14 +3,15 @@ import select
 import pickle
 import sys
 import logging
+import yaml
 
-HEADERSIZE = 10
+HEADER = 10
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
 
-class Brocker:
+class Broker:
     server_socket = None
     sockets_list = []  # escuta
     clients = {}  # é um dicionario com informação do tipo de cliente (admin ou public_client ou sensor)
@@ -18,14 +19,14 @@ class Brocker:
     sensor_reading = {}  # id -> toda a info do sensor
     locations = {}  # vai ter as localizações  onde há sensores
 
-    def __init__(self, brocker_ip='0.0.0.0', brocker_port='9000', n_conects='5'):
+    def __init__(self, broker_ip='0.0.0.0', broker_port='9000', n_conects='5'):
 
         try:
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # Para podermos usar sempre a mesma porta sem ter de esperar pelo garbage collector do SO
             self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-            self.server_socket.bind((brocker_ip, int(brocker_port)))
+            self.server_socket.bind((broker_ip, int(broker_port)))
             self.server_socket.listen(int(n_conects))
 
             self.sockets_list.append(self.server_socket)
@@ -40,7 +41,7 @@ class Brocker:
         try:
             msg = {'type': type, 'data': data}
             msg = pickle.dumps(msg)
-            info = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8') + msg
+            info = bytes(f"{len(msg):<{HEADER}}", 'utf-8') + msg
 
             client_socket.send(info)
         except Exception as err:
@@ -227,7 +228,7 @@ class Brocker:
 
     def receive_message(self, client_socket, new_user=False):
         try:
-            message_header = client_socket.recv(HEADERSIZE)
+            message_header = client_socket.recv(HEADER)
 
             if not len(message_header):
                 raise ValueError
@@ -291,8 +292,8 @@ class Brocker:
 if __name__ == "__main__":
     try:
         #               borcker ip, brocker port, number of connections
-        brocker = Brocker(sys.argv[1], sys.argv[2], sys.argv[3])
+        broker = Broker(sys.argv[1], sys.argv[2], sys.argv[3])
     except:
-        brocker = Brocker()
+        broker = Broker()
 
-    brocker.run_brocker()
+    broker.run_brocker()
