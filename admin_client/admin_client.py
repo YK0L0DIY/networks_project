@@ -21,9 +21,11 @@ class ClientAdmin:
         '4': 'close admin'
     }
 
-    # construtor oq ual cria a coencao com o broker
-    def __init__(self, broker_ip='0.0.0.0', broker_port='9000', id='admin'):
-        self.admin_id = id
+    def __init__(self, broker_ip='0.0.0.0',
+                 broker_port='9000',
+                 admin_id='admin'):
+
+        self.admin_id = admin_id
 
         try:
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -42,7 +44,8 @@ class ClientAdmin:
         self.send_info('client_connected', data)
 
         logger.info(
-            f"Successful created client_admin {self.server_socket.getsockname()} and connected to broker {broker_ip}:{broker_port}")
+            f"Successful created client_admin {self.server_socket.getsockname()}"
+            f" and connected to broker {broker_ip}:{broker_port}")
 
     def receive_message(self):
         try:
@@ -53,15 +56,16 @@ class ClientAdmin:
 
             message_length = int(message_header.decode('utf-8').strip())
 
-            dict = pickle.loads(self.server_socket.recv(message_length))
+            response = pickle.loads(self.server_socket.recv(message_length))
 
-            return dict
+            return response
         except Exception as err:
             logger.error(err)
 
     def get_last_reading(self):
         sensor = input('From which sensor?\n-> ')
         self.send_info('get_last_reading', {'sensor': sensor})
+
         response = self.receive_message()
         if response['data']['status'] == 200:
             print('Last reading from sensor: ' + str(response['data']['value']))
@@ -84,9 +88,19 @@ class ClientAdmin:
             with open(file_name, 'r', encoding='utf-8') as file:
                 data = {'version': version, 'file_name': file_name, 'content': file.read(), 'sensor_type': sensor_type}
                 self.send_info('update', data)
+
         except Exception as err:
             logger.error(err)
-            return 1
+            logger.error('File not exist do you want to create it? [y/n]')
+            option = input('\n ->')
+            if option == 'y':
+                info = input('content:\n')
+                data = {'version': version, 'file_name': file_name, 'content': info, 'sensor_type': sensor_type}
+                self.send_info('update', data)
+                return 0
+
+            else:
+                return 1
         return 0
 
     def send_file(self):
@@ -121,17 +135,17 @@ class ClientAdmin:
             while True:
                 for x in self.options:
                     print(x, self.options[x])
-                comand = input('-> ')
+                command = input('-> ')
 
-                if comand == '0':
+                if command == '0':
                     self.get_last_reading()
-                elif comand == '1':
+                elif command == '1':
                     self.get_list_of_sensors()
-                elif comand == '2':
+                elif command == '2':
                     self.send_file()
-                elif comand == '3':
+                elif command == '3':
                     self.kill_sensors()
-                elif comand == '4':
+                elif command == '4':
                     self.close()
                 else:
                     logger.error('Invalid input')
@@ -139,9 +153,9 @@ class ClientAdmin:
         except Exception as err:
             logger.error(err)
 
-    def send_info(self, type, data):
+    def send_info(self, data_type, data):
         try:
-            msg = {'type': type, 'data': data}
+            msg = {'type': data_type, 'data': data}
             msg = pickle.dumps(msg)
             info = bytes(f"{len(msg):<{HEADER}}", 'utf-8') + msg
 
@@ -158,9 +172,16 @@ class ClientAdmin:
 if __name__ == "__main__":
 
     try:
-        #               borcker ip, broker port, broker id
-        client = ClientAdmin(sys.argv[1], sys.argv[2], sys.argv[3])
-    except:
-        client = ClientAdmin()
+        client = ClientAdmin(broker_ip=sys.argv[1],
+                             broker_port=sys.argv[2],
+                             admin_id=sys.argv[3])
+    except Exception as no_args:
+        logger.error("No input, reading from file %s" % no_args)
+
+        with open('config.yaml') as conf:
+            configs = yaml.load(conf, Loader=yaml.FullLoader)
+            client = ClientAdmin(broker_ip=configs['broker_ip'],
+                                 broker_port=configs['broker_port'],
+                                 admin_id=configs['admin_id'])
 
     client.run_client_admin()

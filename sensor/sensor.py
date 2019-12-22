@@ -116,7 +116,7 @@ if __name__ == "__main__":
                         sensor_location=sys.argv[4],
                         sensor_type=sys.argv[5])
     except Exception as input_err:
-        logger.error("No input reading from file %s" % input_err)
+        logger.error("No input, reading from file %s" % input_err)
 
         with open('config.yaml') as conf:
             configs = yaml.load(conf, Loader=yaml.FullLoader)
