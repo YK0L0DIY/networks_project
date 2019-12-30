@@ -66,7 +66,7 @@ class Broker:
             lengh_arr = len(self.locations[local_da_leitura][tipo_de_leitura])
 
             if lengh_arr > 0 and (self.locations[local_da_leitura][tipo_de_leitura][lengh_arr - 1] != data):
-                data_dict = {'local': local_da_leitura, 'newRead': data}
+                data_dict = {'local': local_da_leitura, 'newRead': data , 'type':tipo_de_leitura}
                 for client in self.locations[local_da_leitura]['sub_clients']:
                     self.send_info(client, 'subMessage', {'status': 200, 'value': data_dict})
 
