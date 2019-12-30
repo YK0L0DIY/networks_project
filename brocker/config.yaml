@@ -1,3 +1,3 @@
 broker_ip: 0.0.0.0
 broker_port: 9000
-n_conections: 5
+n_connections: 5

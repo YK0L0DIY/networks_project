@@ -48,16 +48,14 @@ class Sensor:
     def reading(self):
         if self.sensor_type == 'CO2':
             return random.randrange(20, 50, 3)
-        elif self.sensor_type == 'CO':
-            return random.randrange(20, 50, 3)
-        elif self.sensor_type == 'SO2':
-            return random.randrange(20, 50, 3)
-        elif self.sensor_type == 'HC':
-            return random.randrange(20, 50, 3)
+        elif self.sensor_type == 'PM2.5':
+            return random.randrange(0, 5, 0.2)
+        elif self.sensor_type == 'PM10':
+            return random.randrange(0, 50, 2)
         elif self.sensor_type == 'NO2':
-            return random.randrange(20, 50, 3)
-        elif self.sensor_type == 'NO':
-            return random.randrange(20, 50, 3)
+            return random.randrange(0, 16, 2)
+        elif self.sensor_type == 'O3':
+            return random.randrange(0, 16, 1)
         else:
             return random.randrange(20, 50, 3)
 
@@ -114,7 +112,9 @@ if __name__ == "__main__":
                         broker_port=sys.argv[2],
                         sensor_id=sys.argv[3],
                         sensor_location=sys.argv[4],
-                        sensor_type=sys.argv[5])
+                        sensor_type=sys.argv[5],
+                        timeout=int(sys.argv[6]))
+
     except Exception as input_err:
         logger.error("No input, reading from file %s" % input_err)
 
@@ -124,6 +124,7 @@ if __name__ == "__main__":
                             broker_port=configs['broker_port'],
                             sensor_id=configs['sensor_id'],
                             sensor_location=configs['sensor_location'],
-                            sensor_type=configs['sensor_type'])
+                            sensor_type=configs['sensor_type'],
+                            timeout=configs['timeout'])
 
     sensor.run_sensor()

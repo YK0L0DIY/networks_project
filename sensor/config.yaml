@@ -3,3 +3,4 @@ broker_port: 9000
 sensor_id: teste
 sensor_location: lisboa
 sensor_type: CO2
+timeout: 10
