@@ -242,6 +242,8 @@ class Broker:
 
         elif message['type'] == 'kill_sensors':
             self.kill_sensors(client_socket, message['data'])
+        elif message['type'] == 'kill_sensors':
+            self.kill_sensors(client_socket, message['data'])
 
     def receive_message(self, client_socket, new_user=False):
         try:

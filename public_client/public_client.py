@@ -6,6 +6,7 @@ import os
 import threading
 import time
 import yaml
+import select
 
 HEADER = 10
 
@@ -15,10 +16,11 @@ logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 sem = threading.Semaphore()
 
 
+
 class Client:
     client_socket = None
     client_id = None
-
+    brokerDead = False
     # construtor oq ual cria a coencao com o brocker
     def __init__(self, broker_ip='0.0.0.0', broker_port='9000', id='client'):
         self.client_id = id
@@ -41,11 +43,19 @@ class Client:
         logger.info(
             f"Successful created client {self.client_socket.getsockname()} and conected to brocker {broker_ip}:{broker_port}")
 
+
+
+
     def receive_message(self):
         while True:
             sem.acquire()
             message_header = self.client_socket.recv(HEADER)
-
+            if not len(message_header):
+                logger.info('Broker Died')
+                self.brokerDead=True
+                self.client_socket.close()
+                exit(0)
+                return False
             if message_header:
                 message_length = int(message_header.decode('utf-8').strip())
 
@@ -106,7 +116,16 @@ class Client:
                     exit(0)
 
             except Exception as err:
-                logger.info(" Escolha uma 1, 2 ou 3")
+                try:#Mano tu nao estás bem a ver a obra dos diabos que isto é!!!
+                    #basicamente este try aqui dentro é só para ele ler o proximo erro mas silencia-lo
+                    #sem este try o que acontecia era que o processo nao morria tipo uma cena bue estranha
+                    if brokerDead:#erro por que nao tem "self"
+                        self.client_socket.close()
+                        os._exit(1)
+                    else:
+                        logger.info(" Escolha uma 1, 2 ou 3")
+                except:
+                    os._exit(1)
             finally:
                 sem.release()
                 time.sleep(0.25)
@@ -114,9 +133,11 @@ class Client:
     def run_client(self):
 
         process = os.fork()
-        if process > 0:
+        if process == 0:
             self.menu()
-        else:
+            exit(0)
+            return
+        elif process > 0:
             self.receive_message()
 
     def send_info(self, type, data):
