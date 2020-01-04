@@ -1,12 +1,10 @@
-import socket
-import sys
-import pickle
 import logging
 import os
+import pickle
+import socket
+import sys
 import threading
 import time
-import yaml
-import select
 
 HEADER = 10
 
@@ -16,11 +14,10 @@ logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 sem = threading.Semaphore()
 
 
-
 class Client:
     client_socket = None
     client_id = None
-    brokerDead = False
+
     # construtor oq ual cria a coencao com o brocker
     def __init__(self, broker_ip='0.0.0.0', broker_port='9000', id='client'):
         self.client_id = id
@@ -43,20 +40,11 @@ class Client:
         logger.info(
             f"Successful created client {self.client_socket.getsockname()} and conected to brocker {broker_ip}:{broker_port}")
 
-
-
-
     def receive_message(self):
         while True:
             sem.acquire()
             message_header = self.client_socket.recv(HEADER)
-            if not len(message_header):
-                logger.info('Broker Died')
-                self.brokerDead=True
-                self.client_socket.close()
-                sem.release()
-                exit(0)
-                return False
+
             if message_header:
                 message_length = int(message_header.decode('utf-8').strip())
 
@@ -78,8 +66,8 @@ class Client:
                         print(dict['data']['value'])
                 if dict['type'] == 'subMessage':
                     if dict['data']['status'] == 200:
-                        print("Sub Info for " + dict['data']['value']['local'] + " = ",
-                              dict['data']['value']['newRead'],dict['data']['value']['type'])
+                        print("Sub Info for " + dict['data']['value']['local'] + "= ",
+                              dict['data']['value']['newRead'])
                     elif dict['data']['status'] == 400:
                         print(dict['data']['value'])
 
@@ -96,45 +84,50 @@ class Client:
                     "1. Obter última leitura de um local.\n"
                     "2. Modo publish-subscribe.\n"
                     "3. Exit\n")
-                escolha = int(input())
+                escolha = int(input('->'))
                 if escolha == 0:
                     print("Qual o tipo de poluente? (ex: CO2;NO2...")
-                    poluente = input()
+                    poluente = input('->')
                     self.send_info('listar_locais', {'poluente': poluente})
 
                 elif escolha == 1:
                     print("Qual o local onde quer receber as últimas leituras?\n")
-                    local = input()
+                    local = input('->')
                     self.send_info('leituras_local', {'local': local})
 
                 elif escolha == 2:
                     print("Qual o local que quer subescrever?\n")
-                    local = input()
+                    local = input('->')
                     self.send_info("sub", {'local': local})
 
                 elif escolha == 3:
                     self.client_socket.close()
                     exit(0)
                 else:
-                    logger.info(" Escolha uma 0, 1, 2 ou 3")
+                    print('Escolha invalida\n')
 
             except Exception as err:
-                if self.brokerDead:#erro por que nao tem "self"
-                    self.client_socket.close()
-                    os._exit(1)
+                logger.info("Invalid input\n")
             finally:
                 sem.release()
                 time.sleep(0.25)
 
+    def test_connection(self):
+        while 1:
+            self.send_info('test_connection', '')
+            time.sleep(5)
+
     def run_client(self):
 
         process = os.fork()
-        if process == 0:
-            self.menu()
-            exit(0)
-            return
-        elif process > 0:
-            self.receive_message()
+        if process > 0:
+            self.test_connection()
+        else:
+            process = os.fork()
+            if process > 0:
+                self.receive_message()
+            else:
+                self.menu()
 
     def send_info(self, type, data):
         try:
@@ -143,11 +136,10 @@ class Client:
             info = bytes(f"{len(msg):<{HEADER}}", 'utf-8') + msg
 
             self.client_socket.send(info)
-            # logger.info("Data sent to broker")
-
 
         except Exception as err:
-            logger.info("sending error %s" % err)
+            print('\n')
+            logger.error("Broker not exist %s" % err)
             exit(1)
 
         return
@@ -161,4 +153,3 @@ if __name__ == "__main__":
     except:
         client = Client()
     client.run_client()
-
