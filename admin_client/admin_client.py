@@ -1,7 +1,10 @@
+import os
 import socket
 import sys
 import pickle
 import logging
+import time
+
 import yaml
 
 HEADER = 10
@@ -14,11 +17,11 @@ class ClientAdmin:
     server_socket = None
     admin_id = None
     options = {
-        '0': 'get last reading from sensor',
-        '1': 'get list sensors',
-        '2': 'send update to sensors',
-        '3': 'kill sensor',
-        '4': 'close admin'
+        '0.': 'get last reading from sensor',
+        '1.': 'get list sensors',
+        '2.': 'send update to sensors',
+        '3.': 'kill sensor',
+        '4.': 'close admin'
     }
 
     def __init__(self, broker_ip='0.0.0.0',
@@ -130,7 +133,17 @@ class ClientAdmin:
         self.server_socket.close()
         exit(0)
 
+    def test_connection(self):
+        while 1:
+            self.send_info('test_connection', '')
+            time.sleep(5)
+
     def run_client_admin(self):
+        process = os.fork()
+
+        if process > 0:
+            self.test_connection()
+
         try:
             while True:
                 for x in self.options:
@@ -160,10 +173,10 @@ class ClientAdmin:
             info = bytes(f"{len(msg):<{HEADER}}", 'utf-8') + msg
 
             self.server_socket.send(info)
-            print("Data sent to broker")
 
         except Exception as err:
-            print("sending error %s" % err)
+            print('\n')
+            logger.error("Broker not exist %s" % err)
             exit(1)
 
         return
@@ -185,4 +198,3 @@ if __name__ == "__main__":
                                  admin_id=configs['admin_id'])
 
     client.run_client_admin()
-c
