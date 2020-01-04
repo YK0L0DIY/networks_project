@@ -60,7 +60,6 @@ class ClientAdmin:
             message_length = int(message_header.decode('utf-8').strip())
 
             response = pickle.loads(self.server_socket.recv(message_length))
-
             return response
         except Exception as err:
             logger.error(err)

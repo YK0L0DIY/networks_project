@@ -3,6 +3,8 @@ import select
 import pickle
 import sys
 import logging
+from datetime import datetime
+
 import yaml
 
 HEADER = 10
@@ -71,7 +73,10 @@ class Broker:
                     self.send_info(client, 'subMessage', {'status': 200, 'value': data_dict})
 
             self.sensor_reading[socket_id]['last_read'] = data
-            self.locations[local_da_leitura][tipo_de_leitura].append(data)
+            self.locations[local_da_leitura][tipo_de_leitura].append(
+                {"sensor_id": socket_id,
+                 "value": data,
+                 "date": datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
 
         except Exception as err:
             logger.error(err)
@@ -165,6 +170,11 @@ class Broker:
                                                        'error': f'Problem updating the sensor of type {sensor_type}'})
         return
 
+    def delete_sensor_data(self, sensor_id, sensor_local, sensor_type):
+        for index in range(len(self.locations[sensor_local][sensor_type])):
+            if self.locations[sensor_local][sensor_type][index]["sensor_id"] == sensor_id:
+                del self.locations[sensor_local][sensor_type][index]
+
     def kill_sensor(self, client_socket):
         self.send_info(client_socket, 'kill', {})
 
@@ -174,6 +184,9 @@ class Broker:
             if x:
                 for socket_id in self.sensor_id:
                     if self.sensor_id[socket_id] == x:
+                        tipo_de_leitura = self.sensor_reading[x]['type']  # vamos bucar o tipo de leituras do sensor
+                        local_da_leitura = self.sensor_reading[x]['location']  # vamos buscar a localização
+                        self.delete_sensor_data(x, local_da_leitura, tipo_de_leitura)
                         self.kill_sensor(socket_id)
                         killed.append(x)
 
@@ -240,8 +253,6 @@ class Broker:
         elif message['type'] == 'update':
             self.update(client_socket, message['data'])
 
-        elif message['type'] == 'kill_sensors':
-            self.kill_sensors(client_socket, message['data'])
         elif message['type'] == 'kill_sensors':
             self.kill_sensors(client_socket, message['data'])
 
