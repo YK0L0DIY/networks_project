@@ -219,7 +219,7 @@ class Broker:
                 for poluente in self.locations[message['data']['local']]:
                     if poluente != 'sub_clients':
                         size_array = len(self.locations[message['data']['local']][poluente])
-                        last_readings[poluente] = self.locations[message['data']['local']][poluente][size_array - 1]
+                        last_readings[poluente] = self.locations[message['data']['local']][poluente][size_array - 1]['value']
 
             if len(last_readings) > 0:
                 self.send_info(client_socket, 'leituras_local', {'status': 200, 'value': last_readings})
