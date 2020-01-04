@@ -92,7 +92,7 @@ class ClientAdmin:
         except Exception as err:
             logger.error(err)
             print('File not exist do you want to create it? [y/n]')
-            option = input('\n ->')
+            option = input('->')
             if option == 'y':
                 info = input('content:\n')
                 data = {'version': version, 'file_name': file_name, 'content': info, 'sensor_type': sensor_type}
@@ -185,4 +185,3 @@ if __name__ == "__main__":
                                  admin_id=configs['admin_id'])
 
     client.run_client_admin()
-c

@@ -54,6 +54,7 @@ class Client:
                 logger.info('Broker Died')
                 self.brokerDead=True
                 self.client_socket.close()
+                sem.release()
                 exit(0)
                 return False
             if message_header:
@@ -114,17 +115,12 @@ class Client:
                 elif escolha == 3:
                     self.client_socket.close()
                     exit(0)
+                else:
+                    logger.info(" Escolha uma 0, 1, 2 ou 3")
 
             except Exception as err:
-                try:#Mano tu nao estás bem a ver a obra dos diabos que isto é!!!
-                    #basicamente este try aqui dentro é só para ele ler o proximo erro mas silencia-lo
-                    #sem este try o que acontecia era que o processo nao morria tipo uma cena bue estranha
-                    if brokerDead:#erro por que nao tem "self"
-                        self.client_socket.close()
-                        os._exit(1)
-                    else:
-                        logger.info(" Escolha uma 1, 2 ou 3")
-                except:
+                if self.brokerDead:#erro por que nao tem "self"
+                    self.client_socket.close()
                     os._exit(1)
             finally:
                 sem.release()
@@ -165,3 +161,4 @@ if __name__ == "__main__":
     except:
         client = Client()
     client.run_client()
+
