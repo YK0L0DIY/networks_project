@@ -76,7 +76,8 @@ class Broker:
             self.locations[local_da_leitura][tipo_de_leitura].append(
                 {"sensor_id": socket_id,
                  "value": data,
-                 "date": datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
+                 "date": datetime.now().strftime('%Y-%m-%d'),
+                 "hour": datetime.now().strftime('%H:%M')})
 
         except Exception as err:
             logger.error(err)
@@ -219,7 +220,8 @@ class Broker:
                 for poluente in self.locations[message['data']['local']]:
                     if poluente != 'sub_clients':
                         size_array = len(self.locations[message['data']['local']][poluente])
-                        last_readings[poluente] = self.locations[message['data']['local']][poluente][size_array - 1]['value']
+                        last_readings[poluente] = self.locations[message['data']['local']][poluente][size_array - 1][
+                            'value']
 
             if len(last_readings) > 0:
                 self.send_info(client_socket, 'leituras_local', {'status': 200, 'value': last_readings})
@@ -228,6 +230,31 @@ class Broker:
                 self.send_info(client_socket, 'leituras_local', {'status': 400,
                                                                  'value': "Não existem medições de poluentes em " +
                                                                           message['data']['local']})
+        except Exception as err:
+            logger.error(err)
+
+    def local_time_read(self, client_socket, message):
+        local = message['local']
+        date = message['date']
+        hour = message['hour']
+        readings = {"date":date,"hour": hour, "local": local}
+        try:
+            if local in self.locations:
+                for poluente in self.locations[local]:
+                    if poluente != 'sub_clients':
+                        for index in range(len(self.locations[local][poluente])):
+                            if self.locations[local][poluente][index]["date"] == date and self.locations[local][poluente][index]["hour"] == hour:
+                                readings[poluente] = self.locations[local][poluente][index]["value"]
+            else:
+                self.send_info(client_socket, 'local_time_read', {'status': 400,
+                                                                  'value': "Este local, \""+local+"\" não é reconhecido.\n"})
+
+            if len(readings) > 3:
+                self.send_info(client_socket, 'local_time_read', {'status': 200, 'value': readings})
+
+            else:
+                self.send_info(client_socket, 'local_time_read', {'status': 400,
+                                                                  'value': "Não existem medições de poluentes na data: " + date + " e hora: " + hour+"\n"})
         except Exception as err:
             logger.error(err)
 
@@ -255,6 +282,9 @@ class Broker:
 
         elif message['type'] == 'kill_sensors':
             self.kill_sensors(client_socket, message['data'])
+
+        elif message['type'] == 'local_time_read':
+            self.local_time_read(client_socket, message['data'])
 
         elif message['type'] == 'test_connection':
             logger.debug('Connection tested')
