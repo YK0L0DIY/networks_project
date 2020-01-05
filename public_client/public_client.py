@@ -6,6 +6,8 @@ import sys
 import threading
 import time
 
+import yaml
+
 HEADER = 10
 
 logger = logging.getLogger(__name__)
@@ -167,7 +169,15 @@ if __name__ == "__main__":
 
     try:
         #               borcker ip, brocker port   id cliente
-        client = Client(sys.argv[1], sys.argv[2], sys.argv[3])
-    except:
-        client = Client()
+        client = Client(broker_ip=sys.argv[1],
+                        broker_port=sys.argv[2],
+                        id=sys.argv[3])
+    except Exception as no_args:
+        logger.error("No input, reading from file %s" % no_args)
+
+        with open('config.yaml') as conf:
+            configs = yaml.load(conf, Loader=yaml.FullLoader)
+            client = Client(broker_ip=configs['broker_ip'],
+                            broker_port=configs['broker_port'],
+                            id=configs['id'])
     client.run_client()
