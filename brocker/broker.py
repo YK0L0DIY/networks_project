@@ -173,18 +173,11 @@ class Broker:
 
     def delete_sensor_data(self, sensor_id, sensor_local, sensor_type):
         try:
-            to_remove = []
             logger.info('Info before killing sensor' + str(self.locations[sensor_local][sensor_type]))
 
             new = [x for x in self.locations[sensor_local][sensor_type] if x["sensor_id"] != sensor_id]
 
             self.locations[sensor_local][sensor_type] = new
-            # for index in range(len(self.locations[sensor_local][sensor_type])):
-            #    if self.locations[sensor_local][sensor_type][index]["sensor_id"] == sensor_id:
-            #        to_remove.append(index)
-
-            # for x in to_remove:
-            #    del self.locations[sensor_local][sensor_type][x]
 
             logger.info('Info after killing the sensor' + str(new))
 
@@ -262,15 +255,18 @@ class Broker:
                                     self.locations[local][poluente][index]["hour"] == hour:
                                 readings[poluente] = self.locations[local][poluente][index]["value"]
             else:
-                self.send_info(client_socket, 'local_time_read', {'status': 400,
-                                                                  'value': "Este local, \"" + local + "\" não é reconhecido.\n"})
+                self.send_info(client_socket,
+                               'local_time_read',
+                               {'status': 400, 'value': "Este local, \"" + local + "\" não é reconhecido.\n"})
 
             if len(readings) > 3:
                 self.send_info(client_socket, 'local_time_read', {'status': 200, 'value': readings})
 
             else:
-                self.send_info(client_socket, 'local_time_read', {'status': 400,
-                                                                  'value': "Não existem medições de poluentes na data: " + date + " e hora: " + hour + "\n"})
+                self.send_info(client_socket,
+                               'local_time_read',
+                               {'status': 400,
+                                'value': "Não existem medições na data: " + date + " e hora: " + hour + "\n"})
         except Exception as err:
             logger.error(err)
 
