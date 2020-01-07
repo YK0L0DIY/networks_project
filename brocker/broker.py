@@ -172,9 +172,24 @@ class Broker:
         return
 
     def delete_sensor_data(self, sensor_id, sensor_local, sensor_type):
-        for index in range(len(self.locations[sensor_local][sensor_type])):
-            if self.locations[sensor_local][sensor_type][index]["sensor_id"] == sensor_id:
-                del self.locations[sensor_local][sensor_type][index]
+        try:
+            to_remove = []
+            logger.info('Info before killing sensor' + str(self.locations[sensor_local][sensor_type]))
+
+            new = [x for x in self.locations[sensor_local][sensor_type] if x["sensor_id"] != sensor_id]
+
+            self.locations[sensor_local][sensor_type] = new
+            # for index in range(len(self.locations[sensor_local][sensor_type])):
+            #    if self.locations[sensor_local][sensor_type][index]["sensor_id"] == sensor_id:
+            #        to_remove.append(index)
+
+            # for x in to_remove:
+            #    del self.locations[sensor_local][sensor_type][x]
+
+            logger.info('Info after killing the sensor' + str(new))
+
+        except Exception as error:
+            logger.error(error)
 
     def kill_sensor(self, client_socket):
         self.send_info(client_socket, 'kill', {})
@@ -187,8 +202,8 @@ class Broker:
                     if self.sensor_id[socket_id] == x:
                         tipo_de_leitura = self.sensor_reading[x]['type']  # vamos bucar o tipo de leituras do sensor
                         local_da_leitura = self.sensor_reading[x]['location']  # vamos buscar a localização
-                        self.delete_sensor_data(x, local_da_leitura, tipo_de_leitura)
                         self.kill_sensor(socket_id)
+                        self.delete_sensor_data(x, local_da_leitura, tipo_de_leitura)
                         killed.append(x)
 
         if len(killed) == len(data['sensors']):
@@ -237,24 +252,25 @@ class Broker:
         local = message['local']
         date = message['date']
         hour = message['hour']
-        readings = {"date":date,"hour": hour, "local": local}
+        readings = {"date": date, "hour": hour, "local": local}
         try:
             if local in self.locations:
                 for poluente in self.locations[local]:
                     if poluente != 'sub_clients':
                         for index in range(len(self.locations[local][poluente])):
-                            if self.locations[local][poluente][index]["date"] == date and self.locations[local][poluente][index]["hour"] == hour:
+                            if self.locations[local][poluente][index]["date"] == date and \
+                                    self.locations[local][poluente][index]["hour"] == hour:
                                 readings[poluente] = self.locations[local][poluente][index]["value"]
             else:
                 self.send_info(client_socket, 'local_time_read', {'status': 400,
-                                                                  'value': "Este local, \""+local+"\" não é reconhecido.\n"})
+                                                                  'value': "Este local, \"" + local + "\" não é reconhecido.\n"})
 
             if len(readings) > 3:
                 self.send_info(client_socket, 'local_time_read', {'status': 200, 'value': readings})
 
             else:
                 self.send_info(client_socket, 'local_time_read', {'status': 400,
-                                                                  'value': "Não existem medições de poluentes na data: " + date + " e hora: " + hour+"\n"})
+                                                                  'value': "Não existem medições de poluentes na data: " + date + " e hora: " + hour + "\n"})
         except Exception as err:
             logger.error(err)
 
