@@ -1,5 +1,6 @@
 import logging
 import os
+import signal
 import pickle
 import socket
 import sys
@@ -122,6 +123,7 @@ class Client:
 
                 elif escolha == 4:
                     self.client_socket.close()
+                    os.kill(0,signal.SIGSTOP)
                     exit(0)
                 else:
                     print('Escolha invalida\n')
@@ -135,7 +137,7 @@ class Client:
     def test_connection(self):
         while 1:
             self.send_info('test_connection', '')
-            time.sleep(5)
+            time.sleep(2)
 
     def run_client(self):
 
@@ -160,7 +162,8 @@ class Client:
         except Exception as err:
             print('\n')
             logger.error("Broker not exist %s" % err)
-            exit(1)
+            os.kill(0, signal.SIGSTOP)
+            exit(0)
 
         return
 
