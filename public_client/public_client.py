@@ -70,7 +70,7 @@ class Client:
                 if dict['type'] == 'subMessage':
                     if dict['data']['status'] == 200:
                         print("Sub Info for " + dict['data']['value']['local'] + "= ",
-                              dict['data']['value']['newRead'])
+                              dict['data']['value']['newRead'],dict['data']['value']['type'])
                     elif dict['data']['status'] == 400:
                         print(dict['data']['value'])
                 if dict['type'] == 'local_time_read':
