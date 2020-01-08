@@ -46,6 +46,10 @@ class Sensor:
                     f" and conected to brocker {broker_ip}:{broker_port}")
 
     def reading(self):
+        """
+        Generates a valid reading for specific pollutant
+        :return: int
+        """
         if self.sensor_type == 'CO2':
             return random.randrange(20, 50, 3)
         elif self.sensor_type == 'PM2.5':
@@ -60,6 +64,11 @@ class Sensor:
             return random.randrange(20, 50, 3)
 
     def run_sensor(self):
+        """
+        Sends the readings according to the timeout, and it's always ready to communicate with the broker to
+        do operations like kill the application or update it.
+        :return: Bool
+        """
         while True:
             while True:
                 ready = select.select([self.sensor_socket], [], [], self.timeout)
@@ -92,6 +101,12 @@ class Sensor:
             self.send_info('sensor_reading', {'leitura': self.reading()})
 
     def send_info(self, msg_type, data):
+        """
+        Sends data to a socket.
+        :param msg_type: Message type.
+        :param data: Message data.
+        :return:
+        """
         try:
             msg = {'type': msg_type, 'data': data}
             msg = pickle.dumps(msg)

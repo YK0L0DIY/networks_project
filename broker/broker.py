@@ -15,11 +15,11 @@ logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
 class Broker:
     server_socket = None
-    sockets_list = []  # escuta
-    clients = {}  # é um dicionario com informação do tipo de cliente (admin ou public_client ou sensor)
-    sensor_id = {}  # key é o socket e value é o id
-    sensor_reading = {}  # id -> toda a info do sensor
-    locations = {}  # vai ter as localizações  onde há sensores
+    sockets_list = []
+    clients = {}
+    sensor_id = {}
+    sensor_reading = {}
+    locations = {}  # all locations and data for specific location
 
     def __init__(self, broker_ip='0.0.0.0',
                  broker_port='9000',
@@ -42,6 +42,12 @@ class Broker:
 
     @staticmethod
     def send_info(client_socket, data_type, data):
+        """
+        Send the pretended message for a specific socket.
+        :param client_socket: Client socket
+        :param data_type: Data type.
+        :param data: Data to send.
+        """
         try:
             msg = {'type': data_type, 'data': data}
             msg = pickle.dumps(msg)
@@ -82,9 +88,6 @@ class Broker:
         except Exception as err:
             logger.error(err)
 
-        # fica adiconada a leitura no fim da lista(depois para irmos buscar esta leitura basta fazer [len(array)-1]
-        # logger.info("A lista de leituras do tipo " + tipo_de_leitura + " tem agr " + str(
-        #    self.locations[local_da_leitura][tipo_de_leitura]))
 
     def add_new_location(self, location):
         self.locations[location] = {}

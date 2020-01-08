@@ -21,7 +21,7 @@ class Client:
     client_socket = None
     client_id = None
 
-    # construtor oq ual cria a coencao com o brocker
+    # construtor oq ual cria a coencao com o broker
     def __init__(self, broker_ip='0.0.0.0', broker_port='9000', id='client'):
         self.client_id = id
 
@@ -171,7 +171,7 @@ class Client:
 if __name__ == "__main__":
 
     try:
-        #               borcker ip, brocker port   id cliente
+        #               borcker ip, broker port   id cliente
         client = Client(broker_ip=sys.argv[1],
                         broker_port=sys.argv[2],
                         id=sys.argv[3])
