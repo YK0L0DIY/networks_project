@@ -143,3 +143,4 @@ if __name__ == "__main__":
                             timeout=configs['timeout'])
 
     sensor.run_sensor()
+

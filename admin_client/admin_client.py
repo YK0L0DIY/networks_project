@@ -1,4 +1,5 @@
 import os
+import signal
 import socket
 import sys
 import pickle
@@ -158,7 +159,8 @@ class ClientAdmin:
                 elif command == '3':
                     self.kill_sensors()
                 elif command == '4':
-                    self.close()
+                    os.kill(0, signal.SIGSTOP)
+                    exit(0)
                 else:
                     logger.error('Invalid input')
 
