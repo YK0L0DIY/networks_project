@@ -40,8 +40,7 @@ class Broker:
 
         logger.info(f'Successful created broker {self.server_socket.getsockname()}')
 
-    @staticmethod
-    def send_info(client_socket, data_type, data):
+    def send_info(self, client_socket, data_type, data):
         """
         Send the pretended message for a specific socket.
         :param client_socket: Client socket
@@ -55,6 +54,10 @@ class Broker:
 
             client_socket.send(info)
         except Exception as err:
+            # para remover caso seja uma subscricao
+            if data_type == 'subMessage':
+                local_da_leitura = data['value']['local']
+                del self.locations[local_da_leitura]['sub_clients'][client_socket]
             logger.error(err)
 
     def publish_subscribe(self, client_socket, message):
@@ -87,7 +90,6 @@ class Broker:
 
         except Exception as err:
             logger.error(err)
-
 
     def add_new_location(self, location):
         self.locations[location] = {}
