@@ -25,9 +25,9 @@ class ClientAdmin:
         '4.': 'close admin'
     }
 
-    def __init__(self, broker_ip='0.0.0.0',
-                 broker_port='9000',
-                 admin_id='admin'):
+    def __init__(self, broker_ip,
+                 broker_port,
+                 admin_id):
 
         self.admin_id = admin_id
 
@@ -52,6 +52,10 @@ class ClientAdmin:
             f" and connected to broker {broker_ip}:{broker_port}")
 
     def receive_message(self):
+        """
+        Receive message from the socket
+        :return: Message that received
+        """
         try:
             message_header = self.server_socket.recv(HEADER)
 
@@ -66,6 +70,9 @@ class ClientAdmin:
             logger.error(err)
 
     def get_last_reading(self):
+        """
+        Send request for the last reading.
+        """
         sensor = input('From which sensor?\n-> ')
         self.send_info('get_last_reading', {'sensor': sensor})
 
@@ -74,9 +81,11 @@ class ClientAdmin:
             print('Last reading from sensor: ' + str(response['data']['value']))
         else:
             logger.error(response['data']['error'])
-        return
 
     def get_list_of_sensors(self):
+        """
+        Send request for the list of sensors
+        """
         self.send_info('get_all_sensors', {})
         response = self.receive_message()
         if response['data']['status'] == 200:
@@ -84,9 +93,15 @@ class ClientAdmin:
                 print(x)
         else:
             logger.error(response['data']['error'])
-        return
 
     def send(self, file_name, version, sensor_type):
+        """
+        Send request to update sensors
+        :param file_name: File to send
+        :param version: Version to send
+        :param sensor_type: Sensor to by updated
+        :return: 0 -> valid , 1 -> error
+        """
         try:
             with open(file_name, 'r', encoding='utf-8') as file:
                 data = {'version': version, 'file_name': file_name, 'content': file.read(), 'sensor_type': sensor_type}
@@ -107,6 +122,9 @@ class ClientAdmin:
         return 0
 
     def send_file(self):
+        """
+        Input of the file to be send
+        """
         sensor_type = input("sensor type?\n-> ")
         file_name = input("file name?\n-> ")
         version = input("version?\n-> ")
@@ -117,9 +135,11 @@ class ClientAdmin:
                 print('Sensors of ' + sensor_type + ' updated')
             else:
                 logger.error(response['data']['error'])
-        return
 
     def kill_sensors(self):
+        """
+        Send request to kill list of sensors
+        """
         sensors = input('Which sensors?[ids separated by spaces]\n-> ')
         self.send_info('kill_sensors', {'sensors': sensors.split(' ')})
         response = self.receive_message()
@@ -127,18 +147,26 @@ class ClientAdmin:
             print('Killed all sensors')
         else:
             logger.error(response['data']['error'])
-        return
 
     def close(self):
+        """
+        Kill admin
+        """
         self.server_socket.close()
         exit(0)
 
     def test_connection(self):
+        """
+        Test connection to broker
+        """
         while 1:
             self.send_info('test_connection', '')
             time.sleep(5)
 
     def run_client_admin(self):
+        """
+        Main function to run the admin
+        """
         process = os.fork()
 
         if process > 0:
@@ -168,6 +196,11 @@ class ClientAdmin:
             logger.error(err)
 
     def send_info(self, data_type, data):
+        """
+        Send info to the broker
+        :param data_type: Type of message
+        :param data: Message to be sent
+        """
         try:
             msg = {'type': data_type, 'data': data}
             msg = pickle.dumps(msg)
@@ -179,8 +212,6 @@ class ClientAdmin:
             print('\n')
             logger.error("Broker not exist %s" % err)
             exit(1)
-
-        return
 
 
 if __name__ == "__main__":

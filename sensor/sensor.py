@@ -16,12 +16,12 @@ class Sensor:
     sensor_socket = None
     version = 0
 
-    def __init__(self, broker_ip='0.0.0.0',
-                 broker_port='9000',
-                 sensor_id='test1',
-                 sensor_location='lisboa',
-                 sensor_type='CO2',
-                 timeout=10):
+    def __init__(self, broker_ip,
+                 broker_port,
+                 sensor_id,
+                 sensor_location,
+                 sensor_type,
+                 timeout):
 
         try:
             self.sensor_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -43,7 +43,7 @@ class Sensor:
         self.sensor_type = sensor_type
 
         logger.info(f"Successful created sensor {self.sensor_socket.getsockname()}"
-                    f" and conected to brocker {broker_ip}:{broker_port}")
+                    f" and connected to broker {broker_ip}:{broker_port}")
 
     def reading(self):
         """
@@ -143,4 +143,3 @@ if __name__ == "__main__":
                             timeout=configs['timeout'])
 
     sensor.run_sensor()
-

@@ -1,7 +1,7 @@
 import logging
 import os
-import signal
 import pickle
+import signal
 import socket
 import sys
 import threading
@@ -21,9 +21,12 @@ class Client:
     client_socket = None
     client_id = None
 
-    # construtor oq ual cria a coencao com o broker
-    def __init__(self, broker_ip='0.0.0.0', broker_port='9000', id='client'):
-        self.client_id = id
+    def __init__(self,
+                 broker_ip,
+                 broker_port,
+                 client_id):
+
+        self.client_id = client_id
 
         try:
             self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -35,13 +38,15 @@ class Client:
         try:
             self.client_socket.connect((broker_ip, int(broker_port)))
         except Exception as err:
-            logger.info("socket creation failed with error %s" % err)
+            logger.info("Socket creation failed with error %s" % err)
             exit(1)
+
         data = {'id': self.client_id}
         self.send_info('client_connected', data)
 
         logger.info(
-            f"Successful created client {self.client_socket.getsockname()} and conected to brocker {broker_ip}:{broker_port}")
+            f"Successful created client {self.client_socket.getsockname()}"
+            f" and connected to broker {broker_ip}:{broker_port}")
 
     def receive_message(self):
         while True:
@@ -51,36 +56,43 @@ class Client:
             if message_header:
                 message_length = int(message_header.decode('utf-8').strip())
 
-                dict = pickle.loads(self.client_socket.recv(message_length))
-                # logger.info(dict)  # sera uma lista de locais que teem sensores daquele tipo
+                response = pickle.loads(self.client_socket.recv(message_length))
 
-                # logger.info("A receber dados: \n")
-                if dict['type'] == 'lista_locais':
-                    if dict['data']['status'] == 200:
-                        for x in dict['data']['value']:
+                if response['type'] == 'lista_locais':
+                    if response['data']['status'] == 200:
+                        for x in response['data']['value']:
                             print(x)
-                    elif dict['data']['status'] == 400:
-                        print(dict['data']['value'])
-                if dict['type'] == 'leituras_local':
-                    if dict['data']['status'] == 200:
-                        for key in dict['data']['value']:
-                            print(key + ": " + str(dict['data']['value'][key]))
-                    elif dict['data']['status'] == 400:
-                        print(dict['data']['value'])
-                if dict['type'] == 'subMessage':
-                    if dict['data']['status'] == 200:
-                        print("Sub Info for " + dict['data']['value']['local'] + "= ",
-                              dict['data']['value']['newRead'],dict['data']['value']['type'])
-                    elif dict['data']['status'] == 400:
-                        print(dict['data']['value'])
-                if dict['type'] == 'local_time_read':
-                    if dict['data']['status'] == 200:
-                            print("Readings from " + dict['data']['value']['local'] + " at " + dict['data']['value']['date'] +" "+ dict['data']['value']['hour']+":\n")
-                            for poluent in dict['data']['value']:
-                                if poluent != 'date' and poluent != 'local' and poluent != 'hour':
-                                    print(dict['data']['value'][poluent]," "+poluent)
-                    elif dict['data']['status'] == 400:
-                        print(dict['data']['value'])
+
+                    elif response['data']['status'] == 400:
+                        print(response['data']['value'])
+
+                if response['type'] == 'leituras_local':
+                    if response['data']['status'] == 200:
+                        for key in response['data']['value']:
+                            print(key + ": " + str(response['data']['value'][key]))
+
+                    elif response['data']['status'] == 400:
+                        print(response['data']['value'])
+
+                if response['type'] == 'subMessage':
+                    if response['data']['status'] == 200:
+                        print("Sub Info for " + response['data']['value']['local'] + "= ",
+                              response['data']['value']['newRead'], response['data']['value']['type'])
+
+                    elif response['data']['status'] == 400:
+                        print(response['data']['value'])
+
+                if response['type'] == 'local_time_read':
+                    if response['data']['status'] == 200:
+                        print("Readings from " + response['data']['value']['local'] + " at "
+                              + response['data']['value']['date'] + " " + response['data']['value']['hour'] + ":\n")
+
+                        for pollutant in response['data']['value']:
+                            if pollutant != 'date' and pollutant != 'local' and pollutant != 'hour':
+                                print(response['data']['value'][pollutant], " " + pollutant)
+
+                    elif response['data']['status'] == 400:
+                        print(response['data']['value'])
 
                 sem.release()
                 time.sleep(0.25)
@@ -91,56 +103,64 @@ class Client:
             try:
                 print(
                     "Menu:\n"
-                    "0. Listar locais onde existem sensores de determinado tipo.\n"
-                    "1. Obter última leitura de um local.\n"
-                    "2. Obter última leitura de um local com data e hora\n"
-                    "3. Modo publish-subscribe.\n"
-                    "4. Exit\n")
-                escolha = int(input('->'))
-                if escolha == 0:
-                    print("Qual o tipo de poluente? (ex: CO2;NO2...")
-                    poluente = input('->')
-                    self.send_info('listar_locais', {'poluente': poluente})
+                    "0. List sensor by type.\n"
+                    "1. Get last reading by location.\n"
+                    "2. Get reading by date and time.\n"
+                    "3. Mode publish-subscribe.\n"
+                    "4. Exit.\n")
 
-                elif escolha == 1:
-                    print("Qual o local onde quer receber as últimas leituras?\n")
+                option = int(input('->'))
+
+                if option == 0:
+                    print("What type of pollutant? (ex: CO2;NO2...")
+                    pollutant = input('->')
+                    self.send_info('listar_locais', {'poluente': pollutant})
+
+                elif option == 1:
+                    print("Where do you want to receive the latest readings?\n")
                     local = input('->')
                     self.send_info('leituras_local', {'local': local})
 
-                elif escolha == 2:
-                    print("Qual o local?\n")
+                elif option == 2:
+                    print("Local?\n")
                     local = input('->')
-                    print("Qual a data da leitura?\nEx: 2019-12-17\n")
+                    print("Date?\nEx: 2019-12-17\n")
                     date = input('->')
-                    print("Qual a hora da leitura?\nEx: 23:27\n")
+                    print("Hour?\nEx: 23:27\n")
                     hour = input('->')
-                    self.send_info('local_time_read', {'local': local,'date': date,'hour': hour})
+                    self.send_info('local_time_read', {'local': local, 'date': date, 'hour': hour})
 
-                elif escolha == 3:
-                    print("Qual o local que quer subescrever?\n")
+                elif option == 3:
+                    print("Where do you want to Subscribe?\n")
                     local = input('->')
                     self.send_info("sub", {'local': local})
 
-                elif escolha == 4:
+                elif option == 4:
                     self.client_socket.close()
-                    os.kill(0,signal.SIGSTOP)
+                    os.kill(0, signal.SIGSTOP)
                     exit(0)
                 else:
-                    print('Escolha invalida\n')
+                    print('Invalid input\n')
 
             except Exception as err:
                 logger.info("Invalid input\n")
+                logger.debug(err)
             finally:
                 sem.release()
                 time.sleep(0.25)
 
     def test_connection(self):
+        """
+        Function to test the connection with broker
+        """
         while 1:
             self.send_info('test_connection', '')
             time.sleep(2)
 
     def run_client(self):
-
+        """
+        Main function to run client
+        """
         process = os.fork()
         if process > 0:
             self.test_connection()
@@ -151,9 +171,14 @@ class Client:
             else:
                 self.menu()
 
-    def send_info(self, type, data):
+    def send_info(self, type_message, data):
+        """
+        Send message to broker
+        :param type_message: Message type
+        :param data: Data to be send
+        """
         try:
-            msg = {'type': type, 'data': data}
+            msg = {'type': type_message, 'data': data}
             msg = pickle.dumps(msg)
             info = bytes(f"{len(msg):<{HEADER}}", 'utf-8') + msg
 
@@ -165,16 +190,14 @@ class Client:
             os.kill(0, signal.SIGSTOP)
             exit(0)
 
-        return
-
 
 if __name__ == "__main__":
 
     try:
-        #               borcker ip, broker port   id cliente
         client = Client(broker_ip=sys.argv[1],
                         broker_port=sys.argv[2],
-                        id=sys.argv[3])
+                        client_id=sys.argv[3])
+
     except Exception as no_args:
         logger.error("No input, reading from file %s" % no_args)
 
@@ -182,5 +205,6 @@ if __name__ == "__main__":
             configs = yaml.load(conf, Loader=yaml.FullLoader)
             client = Client(broker_ip=configs['broker_ip'],
                             broker_port=configs['broker_port'],
-                            id=configs['id'])
+                            client_id=configs['id'])
+
     client.run_client()
